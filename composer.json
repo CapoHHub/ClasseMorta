@@ -1,0 +1,10 @@
+{
+    "name": "capo/classe-morta",
+    "description": "Classeviva ma un po diverso",
+    "autoload": {
+        "psr-4": {
+            "Capo\\ClasseMorta\\": "src/"
+        }
+    },
+    "require": {}
+}
