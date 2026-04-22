@@ -1,7 +1,7 @@
-# 1. Base: PHP 8.2 con Apache
+# 1. Base: PHP con Apache
 FROM php:8.2-apache
 
-# 2. Estensioni base (non toccano i moduli MPM)
+# 2. Estensioni base
 RUN docker-php-ext-install pdo pdo_mysql mysqli
 
 # 3. Abilita rewrite
@@ -13,11 +13,9 @@ COPY . /var/www/html/
 # 5. Permessi
 RUN chown -R www-data:www-data /var/www/html
 
-# 6. FIX PORTA (Versione più sicura)
-# Invece di modificare i file interni, diciamo ad Apache di ascoltare 
-# sulla porta che Railway ci passa tramite la variabile d'ambiente.
-RUN echo "Listen \${PORT}" > /etc/apache2/ports.conf
-RUN sed -i 's/<VirtualHost \*:80>/<VirtualHost \*:\${PORT}>/g' /etc/apache2/sites-available/000-default.conf
+# 6. Configurazione Porta (Semplice)
+RUN sed -i 's/80/${PORT}/g' /etc/apache2/sites-available/000-default.conf /etc/apache2/ports.conf
 
-# 7. Start
-CMD ["apache2-foreground"]
+# 7. COMANDO DI AVVIO (Il Fix per l'MPM)
+# Prima di avviare Apache, disabilitiamo mpm_event che causa il conflitto
+CMD ["/bin/bash", "-c", "a2dismod mpm_event && a2enmod mpm_prefork && apache2-foreground"]
