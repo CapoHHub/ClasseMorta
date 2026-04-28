@@ -1,0 +1,18 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8080:80"
+    volumes:
+      - ./backend:/var/www/html
+    environment:
+      - PORT=80
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html
+    environment:
+      - PORT=80

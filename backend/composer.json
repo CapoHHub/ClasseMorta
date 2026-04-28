@@ -1,0 +1,9 @@
+{
+    "name": "capo/backend",
+    "autoload": {
+        "psr-4": {
+            "Capo\\Backend\\": "src/"
+        }
+    },
+    "require": {}
+}
