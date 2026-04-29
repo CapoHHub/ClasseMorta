@@ -1,7 +1,7 @@
 <?php 
 
 require __DIR__ . '/src/Controllers/StudentiController.php';
-require __DIR__ . '/controllers/AuthController.php';
+require __DIR__ . '/src/Controllers/AuthController.php';
 
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");

@@ -5,7 +5,7 @@ const API_URL = window.location.hostname === "localhost"
 
 function apiRequest(endpoint) {
     fetch(`${API_URL}${endpoint}`)
-        .then(async (res) => {
+        .then(async function (res) {
             const text = await res.text();
             try {
                 return JSON.parse(text);
@@ -13,19 +13,27 @@ function apiRequest(endpoint) {
                 throw new Error(`Risposta non JSON dal backend: ${text}`);
             }
         })
-        .then((data) => console.log(data))
-        .catch((err) => console.error(err));
+        .then(function (data) {
+            console.log(data);
+        })
+        .catch(function (err) {
+            console.error(err);
+        });
 }
 
 window.apiRequest = apiRequest;
 
-// Elementi UI del form login.
-const form = document.getElementById("loginForm");
-const message = document.getElementById("loginMessage");
+function initLogin() {
+    // Elementi UI del form login.
+    const form = document.getElementById("loginForm");
+    const message = document.getElementById("loginMessage");
 
-// Esegue la logica solo nella pagina che contiene il form.
-if (form && message) {
-    form.addEventListener("submit", async (event) => {
+    // Esegue la logica solo nella pagina che contiene il form.
+    if (!form || !message) {
+        return;
+    }
+
+    form.addEventListener("submit", async function (event) {
         event.preventDefault();
         message.textContent = "Accesso in corso...";
         message.className = "mt-4 text-sm text-slate-600";
@@ -54,3 +62,5 @@ if (form && message) {
         }
     });
 }
+
+window.initLogin = initLogin;
