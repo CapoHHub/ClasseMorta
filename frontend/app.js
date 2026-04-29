@@ -3,7 +3,7 @@ const API_URL = window.location.hostname === "localhost"
     ? "http://localhost:8080"
     : window.location.origin;
 
-// Elementi UI del form login.
+const login = (API_URL) => {// Elementi UI del form login.
 const form = document.getElementById("loginForm");
 const message = document.getElementById("loginMessage");
 
@@ -45,4 +45,5 @@ if (form && message) {
             message.className = "mt-4 text-sm text-red-600";
         }
     });
+}
 }
