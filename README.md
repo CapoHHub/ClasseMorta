@@ -1,10 +1,12 @@
 # ClasseMorta
-Progetto TPSTI 5INB
+Progetto TPST 5INB
 
 ## Test locale
 
-docker-compose up --build
+`docker-compose up --build`
 
-Avviato in localhost:3000
+Il sito verrà avviato in localhost:3000
 
-API: localhost:8080
+## Tecnologie e servizi
+
+- RDBMS: Postgres (Neon)
