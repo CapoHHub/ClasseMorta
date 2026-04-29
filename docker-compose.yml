@@ -5,6 +5,7 @@ services:
       - "8080:80"
     volumes:
       - ./backend:/var/www/html
+      - ./.env:/var/www/html/.env:ro
     environment:
       - PORT=80
 
