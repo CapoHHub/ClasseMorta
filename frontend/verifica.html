@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Svolgi verifica - ClasseMorta</title>
+    <link rel="icon" href="assets/logo.png">
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+    <header class="cm-header"></header>
+
+    <main class="cm-main">
+        <a href="verifiche.html" class="cm-text-small">&larr; Torna alle verifiche</a>
+        <h1 class="cm-page-title cm-mt-12" id="titolo">Verifica</h1>
+        <p class="cm-page-sub" id="meta"></p>
+
+        <div class="cm-card">
+            <p id="descrizione" class="cm-text-muted"></p>
+            <div id="alertBox" class="cm-alert hidden"></div>
+
+            <form id="form" class="cm-form cm-mt-20">
+                <div id="domandeBox"></div>
+                <div class="cm-flex cm-gap-8">
+                    <button type="submit" class="cm-btn cm-btn-gold">Consegna risposte</button>
+                    <a href="verifiche.html" class="cm-btn cm-btn-ghost">Annulla</a>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+    <script>
+        const user = requireAuth("studente");
+        const params = new URLSearchParams(window.location.search);
+        const verificaId = parseInt(params.get("id"));
+
+        if (user && !verificaId) {
+            window.location.href = "verifiche.html";
+        }
+        if (user) {
+            renderNavbar("verifiche");
+            carica();
+        }
+
+        async function carica() {
+            try {
+                const data = await apiFetch(`/api/verifiche/${verificaId}`);
+                document.getElementById("titolo").textContent = data.verifica.titolo;
+                document.getElementById("meta").innerHTML =
+                    `<span class="cm-badge">${escapeHtml(data.verifica.classe)}</span> ` +
+                    `${escapeHtml(data.verifica.materia)} · ` +
+                    `prof. ${escapeHtml(data.verifica.prof_cognome)} · ` +
+                    `${formatDate(data.verifica.data_creazione)}`;
+                if (data.verifica.descrizione) {
+                    document.getElementById("descrizione").textContent = data.verifica.descrizione;
+                }
+
+                const box = document.getElementById("domandeBox");
+                box.innerHTML = data.domande.map((d, i) => `
+                    <div class="cm-field">
+                        <label>Domanda ${i + 1}</label>
+                        <div class="cm-domanda">${escapeHtml(d.testo)}</div>
+                        <textarea class="cm-textarea risposta-input" rows="4"
+                                  data-domanda="${d.id}"
+                                  placeholder="Scrivi qui la tua risposta...">${escapeHtml(data.risposte_studente[d.id] || "")}</textarea>
+                    </div>
+                `).join("");
+
+                document.getElementById("form").addEventListener("submit", consegna);
+            } catch (err) {
+                showAlert("alertBox", "error", err.message);
+            }
+        }
+
+        async function consegna(ev) {
+            ev.preventDefault();
+            const risposte = {};
+            document.querySelectorAll(".risposta-input").forEach(t => {
+                risposte[t.dataset.domanda] = t.value;
+            });
+            try {
+                await apiFetch(`/api/verifiche/${verificaId}/risposte`, {
+                    method: "POST",
+                    body: JSON.stringify({ risposte }),
+                });
+                showAlert("alertBox", "success",
+                    "Risposte consegnate! Puoi ancora modificarle finché il professore non le visualizza.");
+            } catch (err) {
+                showAlert("alertBox", "error", err.message);
+            }
+        }
+    </script>
+</body>
+</html>

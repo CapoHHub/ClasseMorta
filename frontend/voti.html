@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Voti - ClasseMorta</title>
+    <link rel="icon" href="assets/logo.png">
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+    <header class="cm-header"></header>
+
+    <main class="cm-main">
+        <h1 class="cm-page-title">Gestione voti</h1>
+        <p class="cm-page-sub">
+            Voti memorizzati su MongoDB Atlas. Solo il professore che insegna
+            allo studente può vedere e modificare i voti.
+        </p>
+
+        <div class="cm-card">
+            <div class="cm-row">
+                <div class="cm-field">
+                    <label for="classe">Classe</label>
+                    <select id="classe" class="cm-select"></select>
+                </div>
+                <div class="cm-field">
+                    <label for="studente">Studente</label>
+                    <select id="studente" class="cm-select"></select>
+                </div>
+            </div>
+            <div id="alertBox" class="cm-alert hidden"></div>
+        </div>
+
+        <div class="cm-card cm-mt-20" id="newVotoCard" style="display:none">
+            <h2>Inserisci nuovo voto</h2>
+            <form id="votoForm" class="cm-form">
+                <div class="cm-row">
+                    <div class="cm-field">
+                        <label for="materia">Materia</label>
+                        <select id="materia" class="cm-select" required></select>
+                    </div>
+                    <div class="cm-field">
+                        <label for="voto">Voto (1-10)</label>
+                        <input id="voto" class="cm-input" type="number" min="1" max="10" step="0.25" required>
+                    </div>
+                </div>
+                <div class="cm-field">
+                    <label for="descrizione">Descrizione</label>
+                    <input id="descrizione" class="cm-input" type="text"
+                           placeholder="Es. Verifica scritta capitolo 3">
+                </div>
+                <button type="submit" class="cm-btn">Salva voto</button>
+            </form>
+        </div>
+
+        <div class="cm-card cm-mt-20" id="listCard" style="display:none">
+            <div class="cm-flex-between">
+                <h2 style="margin:0">Voti dello studente</h2>
+                <span id="counter" class="cm-text-muted cm-text-small"></span>
+            </div>
+            <div id="votiList" class="cm-mt-12"></div>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+    <script>
+        const user = requireAuth("professore");
+        let classiData = null;
+        let materieByClasse = {};
+        let preselectedStudente = null;
+
+        if (user) {
+            renderNavbar("voti");
+            const params = new URLSearchParams(window.location.search);
+            preselectedStudente = params.get("studente_id");
+            init();
+        }
+
+        async function init() {
+            try {
+                classiData = await apiFetch("/api/classi");
+                const selClasse = document.getElementById("classe");
+
+                materieByClasse = {};
+                classiData.materie.forEach(m => {
+                    if (!materieByClasse[m.classe]) materieByClasse[m.classe] = [];
+                    materieByClasse[m.classe].push(m);
+                });
+
+                if (!classiData.classi.length) {
+                    showAlert("alertBox", "warn", "Non hai classi assegnate.");
+                    return;
+                }
+                classiData.classi.forEach(c => {
+                    const opt = document.createElement("option");
+                    opt.value = c;
+                    opt.textContent = `Classe ${c}`;
+                    selClasse.appendChild(opt);
+                });
+
+                selClasse.addEventListener("change", () => onClasseChanged());
+                document.getElementById("studente").addEventListener("change", () => caricaVoti());
+                document.getElementById("votoForm").addEventListener("submit", salvaVoto);
+
+                onClasseChanged();
+            } catch (err) {
+                showAlert("alertBox", "error", err.message);
+            }
+        }
+
+        async function onClasseChanged() {
+            const classe = document.getElementById("classe").value;
+            const selStud = document.getElementById("studente");
+            const selMat = document.getElementById("materia");
+            selStud.innerHTML = `<option>Caricamento...</option>`;
+            selMat.innerHTML = "";
+
+            (materieByClasse[classe] || []).forEach(m => {
+                const opt = document.createElement("option");
+                opt.value = m.nome;
+                opt.dataset.id = m.id;
+                opt.textContent = m.nome;
+                selMat.appendChild(opt);
+            });
+
+            try {
+                const studs = await apiFetch(`/api/studenti?classe=${encodeURIComponent(classe)}`);
+                selStud.innerHTML = "";
+                if (!studs.length) {
+                    selStud.innerHTML = `<option>Nessuno studente</option>`;
+                    document.getElementById("listCard").style.display = "none";
+                    document.getElementById("newVotoCard").style.display = "none";
+                    return;
+                }
+                studs.forEach(s => {
+                    const opt = document.createElement("option");
+                    opt.value = s.id;
+                    opt.textContent = `${s.cognome} ${s.nome}`;
+                    selStud.appendChild(opt);
+                });
+                if (preselectedStudente) {
+                    const found = studs.find(s => String(s.id) === String(preselectedStudente));
+                    if (found) selStud.value = preselectedStudente;
+                    preselectedStudente = null;
+                }
+                document.getElementById("listCard").style.display = "block";
+                document.getElementById("newVotoCard").style.display = "block";
+                caricaVoti();
+            } catch (err) {
+                showAlert("alertBox", "error", err.message);
+            }
+        }
+
+        async function caricaVoti() {
+            const studenteId = document.getElementById("studente").value;
+            if (!studenteId || isNaN(parseInt(studenteId))) return;
+
+            const list = document.getElementById("votiList");
+            list.innerHTML = `<div class="cm-empty">Caricamento...</div>`;
+            try {
+                const voti = await apiFetch(`/api/voti?studente_id=${encodeURIComponent(studenteId)}`);
+                document.getElementById("counter").textContent =
+                    voti.length === 0 ? "Nessun voto" : `${voti.length} voti`;
+
+                if (!voti.length) {
+                    list.innerHTML = `<div class="cm-empty">Nessun voto ancora inserito.</div>`;
+                    return;
+                }
+                list.innerHTML = `
+                    <table class="cm-table">
+                        <thead><tr>
+                            <th>Data</th><th>Materia</th><th>Voto</th><th>Descrizione</th><th></th>
+                        </tr></thead>
+                        <tbody>
+                            ${voti.map(v => `
+                                <tr>
+                                    <td>${formatDate(v.data)}</td>
+                                    <td>${escapeHtml(v.materia || "-")}</td>
+                                    <td><span class="cm-voto ${votoClass(v.voto)}">${v.voto}</span></td>
+                                    <td>${escapeHtml(v.descrizione || "")}</td>
+                                    <td>
+                                        <button class="cm-btn cm-btn-sm cm-btn-danger"
+                                                onclick="eliminaVoto('${v._id}')">
+                                            Elimina
+                                        </button>
+                                    </td>
+                                </tr>
+                            `).join("")}
+                        </tbody>
+                    </table>
+                `;
+            } catch (err) {
+                list.innerHTML = `<div class="cm-alert cm-alert-error">${escapeHtml(err.message)}</div>`;
+            }
+        }
+
+        async function salvaVoto(ev) {
+            ev.preventDefault();
+            hideAlert("alertBox");
+            const studenteId = parseInt(document.getElementById("studente").value);
+            const materia    = document.getElementById("materia").value;
+            const voto       = parseFloat(document.getElementById("voto").value);
+            const desc       = document.getElementById("descrizione").value;
+
+            try {
+                await apiFetch("/api/voti", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        studente_id: studenteId,
+                        materia, voto, descrizione: desc,
+                    }),
+                });
+                showAlert("alertBox", "success", "Voto inserito correttamente.");
+                document.getElementById("votoForm").reset();
+                caricaVoti();
+            } catch (err) {
+                showAlert("alertBox", "error", err.message);
+            }
+        }
+
+        async function eliminaVoto(id) {
+            if (!confirm("Eliminare questo voto?")) return;
+            try {
+                await apiFetch(`/api/voti/${id}`, { method: "DELETE" });
+                caricaVoti();
+            } catch (err) {
+                showAlert("alertBox", "error", err.message);
+            }
+        }
+
+        window.eliminaVoto = eliminaVoto;
+    </script>
+</body>
+</html>

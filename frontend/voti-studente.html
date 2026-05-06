@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>I miei voti - ClasseMorta</title>
+    <link rel="icon" href="assets/logo.png">
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+    <header class="cm-header"></header>
+
+    <main class="cm-main">
+        <h1 class="cm-page-title">I miei voti</h1>
+        <p class="cm-page-sub">Tutti i voti che i tuoi professori ti hanno assegnato.</p>
+
+        <div class="cm-card">
+            <div class="cm-flex-between">
+                <div class="cm-field" style="min-width:200px">
+                    <label for="materia">Filtra per materia</label>
+                    <select id="materia" class="cm-select">
+                        <option value="">Tutte le materie</option>
+                    </select>
+                </div>
+                <div class="cm-text-muted cm-text-small" id="mediaInfo"></div>
+            </div>
+
+            <div id="alertBox" class="cm-alert hidden"></div>
+
+            <div id="votiList" class="cm-mt-20"></div>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+    <script>
+        const user = requireAuth("studente");
+        if (user) {
+            renderNavbar("voti");
+            init();
+        }
+
+        async function init() {
+            document.getElementById("materia").addEventListener("change", carica);
+            await carica();
+        }
+
+        async function carica() {
+            const list = document.getElementById("votiList");
+            list.innerHTML = `<div class="cm-empty">Caricamento...</div>`;
+            const materia = document.getElementById("materia").value;
+            try {
+                const voti = await apiFetch(`/api/voti/me`);
+                renderMaterie(voti);
+
+                if (!voti.length) {
+                    list.innerHTML = `<div class="cm-empty">Nessun voto presente.</div>`;
+                    document.getElementById("mediaInfo").textContent = "";
+                    return;
+                }
+
+                const filtrati = materia
+                    ? voti.filter(v => v.materia === materia)
+                    : voti;
+
+                const media = filtrati.reduce((acc, v) => acc + parseFloat(v.voto), 0) / filtrati.length;
+                document.getElementById("mediaInfo").innerHTML =
+                    `Media: <span class="cm-voto ${votoClass(media)}">${media.toFixed(2)}</span>`;
+
+                list.innerHTML = `
+                    <table class="cm-table">
+                        <thead><tr>
+                            <th>Data</th><th>Materia</th><th>Voto</th><th>Descrizione</th>
+                        </tr></thead>
+                        <tbody>
+                            ${filtrati.map(v => `
+                                <tr>
+                                    <td>${formatDate(v.data)}</td>
+                                    <td>${escapeHtml(v.materia || "-")}</td>
+                                    <td><span class="cm-voto ${votoClass(v.voto)}">${v.voto}</span></td>
+                                    <td>${escapeHtml(v.descrizione || "")}</td>
+                                </tr>
+                            `).join("")}
+                        </tbody>
+                    </table>
+                `;
+            } catch (err) {
+                list.innerHTML = `<div class="cm-alert cm-alert-error">${escapeHtml(err.message)}</div>`;
+            }
+        }
+
+        function renderMaterie(voti) {
+            const sel = document.getElementById("materia");
+            const cur = sel.value;
+            const set = new Set(voti.map(v => v.materia).filter(Boolean));
+            sel.innerHTML = `<option value="">Tutte le materie</option>`;
+            [...set].sort().forEach(m => {
+                const o = document.createElement("option");
+                o.value = m;
+                o.textContent = m;
+                sel.appendChild(o);
+            });
+            if ([...set].includes(cur)) sel.value = cur;
+        }
+    </script>
+</body>
+</html>

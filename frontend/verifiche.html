@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verifiche - ClasseMorta</title>
+    <link rel="icon" href="assets/logo.png">
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+    <header class="cm-header"></header>
+
+    <main class="cm-main">
+        <div class="cm-flex-between">
+            <div>
+                <h1 class="cm-page-title">Verifiche</h1>
+                <p class="cm-page-sub" id="subTitle"></p>
+            </div>
+            <a id="newBtn" href="crea-verifica.html" class="cm-btn cm-btn-gold" style="display:none">
+                + Crea verifica
+            </a>
+        </div>
+
+        <div class="cm-card">
+            <div id="alertBox" class="cm-alert hidden"></div>
+            <div id="list"></div>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+    <script>
+        const user = requireAuth();
+        if (user) {
+            renderNavbar("verifiche");
+            document.getElementById("subTitle").textContent =
+                user.ruolo === "professore"
+                    ? "Le verifiche che hai creato."
+                    : "Le verifiche assegnate alla tua classe.";
+            if (user.ruolo === "professore") {
+                document.getElementById("newBtn").style.display = "inline-block";
+            }
+            carica();
+        }
+
+        async function carica() {
+            const list = document.getElementById("list");
+            list.innerHTML = `<div class="cm-empty">Caricamento...</div>`;
+            try {
+                const data = await apiFetch("/api/verifiche");
+                if (!data.length) {
+                    list.innerHTML = `<div class="cm-empty">Nessuna verifica presente.</div>`;
+                    return;
+                }
+                if (user.ruolo === "professore") {
+                    list.innerHTML = `
+                        <table class="cm-table">
+                            <thead><tr>
+                                <th>Titolo</th><th>Materia</th><th>Classe</th>
+                                <th>Domande</th><th>Consegne</th><th>Data</th><th></th>
+                            </tr></thead>
+                            <tbody>
+                                ${data.map(v => `
+                                    <tr>
+                                        <td><b>${escapeHtml(v.titolo)}</b></td>
+                                        <td>${escapeHtml(v.materia)}</td>
+                                        <td><span class="cm-badge">${escapeHtml(v.classe)}</span></td>
+                                        <td>${v.num_domande}</td>
+                                        <td>${v.num_consegne}</td>
+                                        <td>${formatDate(v.data_creazione)}</td>
+                                        <td>
+                                            <a class="cm-btn cm-btn-sm cm-btn-ghost"
+                                               href="risposte.html?id=${v.id}">Risposte</a>
+                                        </td>
+                                    </tr>
+                                `).join("")}
+                            </tbody>
+                        </table>
+                    `;
+                } else {
+                    list.innerHTML = `
+                        <div class="cm-grid">
+                            ${data.map(v => `
+                                <a class="cm-tile" href="verifica.html?id=${v.id}">
+                                    <div class="cm-tile-icon">&#128221;</div>
+                                    <h3>${escapeHtml(v.titolo)}</h3>
+                                    <p><b>${escapeHtml(v.materia)}</b> · prof. ${escapeHtml(v.prof_cognome)}</p>
+                                    <p class="cm-text-small cm-text-muted">${formatDate(v.data_creazione)}</p>
+                                    ${v.descrizione ? `<p class="cm-text-small cm-mt-12">${escapeHtml(v.descrizione)}</p>` : ""}
+                                </a>
+                            `).join("")}
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                list.innerHTML = `<div class="cm-alert cm-alert-error">${escapeHtml(err.message)}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

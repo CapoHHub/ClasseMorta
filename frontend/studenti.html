@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Studenti - ClasseMorta</title>
+    <link rel="icon" href="assets/logo.png">
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+    <header class="cm-header"></header>
+
+    <main class="cm-main">
+        <h1 class="cm-page-title">Elenco studenti</h1>
+        <p class="cm-page-sub">Seleziona una classe per visualizzarne gli iscritti.</p>
+
+        <div class="cm-card">
+            <div class="cm-flex-between">
+                <div class="cm-field" style="min-width:240px">
+                    <label for="classe">Classe</label>
+                    <select id="classe" class="cm-select"></select>
+                </div>
+                <div id="counter" class="cm-text-muted cm-text-small"></div>
+            </div>
+
+            <div id="alertBox" class="cm-alert hidden"></div>
+
+            <div class="cm-mt-20" style="overflow-x:auto">
+                <table class="cm-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Cognome</th>
+                            <th>Nome</th>
+                            <th>Email</th>
+                            <th>Classe</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentiBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <p class="cm-text-muted cm-text-small cm-mt-12">
+            Tecnologia usata in questa pagina:
+            <span class="cm-badge">XMLHttpRequest (XHR)</span>
+        </p>
+    </main>
+
+    <script src="app.js"></script>
+    <script>
+        const user = requireAuth("professore");
+        if (user) {
+            renderNavbar("studenti");
+            init();
+        }
+
+        async function init() {
+            try {
+                const data = await apiFetch("/api/classi");
+                const select = document.getElementById("classe");
+                if (!data.classi.length) {
+                    showAlert("alertBox", "warn", "Non hai classi assegnate.");
+                    return;
+                }
+                data.classi.forEach(c => {
+                    const opt = document.createElement("option");
+                    opt.value = c;
+                    opt.textContent = `Classe ${c}`;
+                    select.appendChild(opt);
+                });
+                select.addEventListener("change", () => caricaStudenti(select.value));
+                caricaStudenti(select.value);
+            } catch (err) {
+                showAlert("alertBox", "error", err.message);
+            }
+        }
+
+        // Volutamente uso XHR per dimostrare l'utilizzo della tecnologia.
+        function caricaStudenti(classe) {
+            const tbody = document.getElementById("studentiBody");
+            const counter = document.getElementById("counter");
+            tbody.innerHTML = `<tr><td colspan="6" class="cm-empty">Caricamento...</td></tr>`;
+            counter.textContent = "";
+
+            apiXHR("GET", `/api/studenti?classe=${encodeURIComponent(classe)}`)
+                .then(studenti => {
+                    if (!Array.isArray(studenti) || studenti.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="6" class="cm-empty">Nessuno studente in questa classe.</td></tr>`;
+                        return;
+                    }
+                    counter.textContent = `${studenti.length} studenti`;
+                    tbody.innerHTML = studenti.map(s => `
+                        <tr>
+                            <td>${s.id}</td>
+                            <td><b>${escapeHtml(s.cognome)}</b></td>
+                            <td>${escapeHtml(s.nome)}</td>
+                            <td>${escapeHtml(s.email)}</td>
+                            <td><span class="cm-badge">${escapeHtml(s.classe)}</span></td>
+                            <td>
+                                <a class="cm-btn cm-btn-sm cm-btn-ghost"
+                                   href="voti.html?studente_id=${s.id}">Voti</a>
+                            </td>
+                        </tr>
+                    `).join("");
+                })
+                .catch(err => {
+                    showAlert("alertBox", "error", err.message);
+                    tbody.innerHTML = `<tr><td colspan="6" class="cm-empty">Errore nel caricamento.</td></tr>`;
+                });
+        }
+    </script>
+</body>
+</html>

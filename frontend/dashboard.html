@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - ClasseMorta</title>
+    <link rel="icon" href="assets/logo.png">
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+    <header class="cm-header"></header>
+
+    <main class="cm-main">
+        <h1 class="cm-page-title" id="welcomeTitle">Benvenuto</h1>
+        <p class="cm-page-sub" id="welcomeSub"></p>
+
+        <div id="profPanel" class="cm-grid" style="display:none">
+            <a class="cm-tile" href="studenti.html">
+                <div class="cm-tile-icon">&#128101;</div>
+                <h3>Elenco studenti</h3>
+                <p>Visualizza gli studenti delle classi in cui insegni.</p>
+            </a>
+            <a class="cm-tile" href="voti.html">
+                <div class="cm-tile-icon">&#128202;</div>
+                <h3>Gestione voti</h3>
+                <p>Inserisci e consulta i voti dei tuoi studenti (MongoDB).</p>
+            </a>
+            <a class="cm-tile" href="verifiche.html">
+                <div class="cm-tile-icon">&#128221;</div>
+                <h3>Verifiche</h3>
+                <p>Crea verifiche con domande aperte e correggi le risposte.</p>
+            </a>
+        </div>
+
+        <div id="studPanel" class="cm-grid" style="display:none">
+            <a class="cm-tile" href="voti-studente.html">
+                <div class="cm-tile-icon">&#128202;</div>
+                <h3>I miei voti</h3>
+                <p>Consulta i voti che i professori ti hanno assegnato.</p>
+            </a>
+            <a class="cm-tile" href="verifiche.html">
+                <div class="cm-tile-icon">&#128221;</div>
+                <h3>Verifiche</h3>
+                <p>Svolgi le verifiche assegnate dai professori.</p>
+            </a>
+        </div>
+
+        <div class="cm-card cm-mt-20" id="profSummary" style="display:none">
+            <h2>Le mie classi e materie</h2>
+            <div id="profSummaryBody" class="cm-text-muted">Caricamento...</div>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+    <script>
+        const user = requireAuth();
+        if (user) {
+            renderNavbar("dashboard");
+            document.getElementById("welcomeTitle").textContent =
+                `Ciao, ${user.nome} ${user.cognome}!`;
+            document.getElementById("welcomeSub").textContent =
+                user.ruolo === "professore"
+                    ? "Pannello professore: gestisci studenti, voti e verifiche."
+                    : `Pannello studente · classe ${user.classe || "-"}`;
+
+            if (user.ruolo === "professore") {
+                document.getElementById("profPanel").style.display = "grid";
+                document.getElementById("profSummary").style.display = "block";
+                caricaRiepilogoProfessore();
+            } else {
+                document.getElementById("studPanel").style.display = "grid";
+            }
+        }
+
+        async function caricaRiepilogoProfessore() {
+            const container = document.getElementById("profSummaryBody");
+            try {
+                const data = await apiFetch("/api/classi");
+                if (!data.classi.length) {
+                    container.innerHTML = "<i>Nessuna classe assegnata.</i>";
+                    return;
+                }
+                const grouped = {};
+                data.materie.forEach(m => {
+                    grouped[m.classe] = grouped[m.classe] || [];
+                    grouped[m.classe].push(m.nome);
+                });
+                container.innerHTML = `
+                    <table class="cm-table">
+                        <thead><tr><th>Classe</th><th>Materie insegnate</th></tr></thead>
+                        <tbody>
+                            ${data.classi.map(c => `
+                                <tr>
+                                    <td><span class="cm-badge">${escapeHtml(c)}</span></td>
+                                    <td>${(grouped[c] || []).map(escapeHtml).join(", ")}</td>
+                                </tr>
+                            `).join("")}
+                        </tbody>
+                    </table>
+                `;
+            } catch (err) {
+                container.textContent = "Errore: " + err.message;
+            }
+        }
+    </script>
+</body>
+</html>

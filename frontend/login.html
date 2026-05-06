@@ -3,30 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Login - ClasseMorta</title>
+    <link rel="icon" href="assets/logo.png">
+    <link rel="stylesheet" href="assets/style.css">
 </head>
-<body class="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-    <main class="w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl">
-        <h1 class="text-2xl font-bold text-slate-900">Accedi</h1>
-        <p class="mt-2 text-sm text-slate-600">Inserisci le tue credenziali.</p>
+<body class="cm-login-bg">
 
-        <form id="loginForm" action="" method="post" class="mt-6 space-y-4">
-            <div>
-                <label for="email" class="block text-sm font-medium text-slate-700">Email</label>
-                <input type="email" id="email" name="email" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+    <main class="cm-login-card">
+        <a class="cm-brand" href="login.html">
+            <img src="assets/logo.png" alt="ClasseMorta">
+            <span class="cm-brand-text">
+                ClasseMorta
+                <small>Registro Elettronico</small>
+            </span>
+        </a>
+
+        <h1>Accedi al registro</h1>
+        <p class="cm-page-sub">Inserisci le tue credenziali scolastiche.</p>
+
+        <form id="loginForm" class="cm-form" autocomplete="off">
+
+            <div class="cm-field">
+                <label>Tipo di account</label>
+                <div class="cm-radio-group">
+                    <label class="cm-radio-option selected" data-ruolo="studente">
+                        <input type="radio" name="ruolo" value="studente" checked>
+                        <div class="icon">&#127891;</div>
+                        <b>Studente</b>
+                        <small>Voti e verifiche</small>
+                    </label>
+                    <label class="cm-radio-option" data-ruolo="professore">
+                        <input type="radio" name="ruolo" value="professore">
+                        <div class="icon">&#128218;</div>
+                        <b>Professore</b>
+                        <small>Gestione classi</small>
+                    </label>
+                </div>
             </div>
-            <div>
-                <label for="password" class="block text-sm font-medium text-slate-700">Password</label>
-                <input type="password" id="password" name="password" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+
+            <div class="cm-field">
+                <label for="email">Email</label>
+                <input class="cm-input" type="text" id="email" name="email"
+                       placeholder="nome.cognome@scuola.it" required>
             </div>
-            <button type="submit" class="w-full rounded-lg bg-blue-600 px-4 py-2.5 font-semibold text-white transition hover:bg-blue-700">Login</button>
+
+            <div class="cm-field">
+                <label for="password">Password</label>
+                <input class="cm-input" type="password" id="password" name="password"
+                       placeholder="La tua password" required>
+            </div>
+
+            <button type="submit" class="cm-btn">Accedi</button>
         </form>
-        <p id="loginMessage" class="mt-4 text-sm text-slate-600"></p>
+
+        <div id="loginAlert" class="cm-alert hidden"></div>
+
+        <details class="cm-mt-20" style="font-size:0.85rem; color: var(--cm-muted);">
+            <summary style="cursor:pointer; font-weight:600;">Credenziali demo</summary>
+            <div style="padding-top:8px; line-height:1.6;">
+                <b>Professori:</b><br>
+                mario.rossi@scuola.it / prof123<br>
+                elena.bianchi@scuola.it / prof123<br><br>
+                <b>Studenti:</b><br>
+                luca.verdi@studenti.it / studente1<br>
+                sofia.neri@studenti.it / studente2<br>
+                marco.gialli@studenti.it / studente3<br>
+                anna.blu@studenti.it / studente4
+            </div>
+        </details>
     </main>
-    <script src="./app.js"></script>
+
+    <script src="app.js"></script>
     <script>
-        initLogin();
+        document.querySelectorAll(".cm-radio-option").forEach(opt => {
+            opt.addEventListener("click", () => {
+                document.querySelectorAll(".cm-radio-option").forEach(o => o.classList.remove("selected"));
+                opt.classList.add("selected");
+                opt.querySelector("input").checked = true;
+            });
+        });
+
+        const form  = document.getElementById("loginForm");
+        const alertBox = document.getElementById("loginAlert");
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+            const ruolo = document.querySelector("input[name=ruolo]:checked").value;
+
+            alertBox.className = "cm-alert cm-alert-info";
+            alertBox.textContent = "Accesso in corso...";
+
+            try {
+                const data = await apiFetch("/api/login", {
+                    method: "POST",
+                    body: JSON.stringify({ email, password, ruolo }),
+                });
+                setAuth(data.token, data.utente);
+                alertBox.className = "cm-alert cm-alert-success";
+                alertBox.textContent = "Accesso effettuato! Reindirizzamento...";
+                setTimeout(() => { window.location.href = "dashboard.html"; }, 400);
+            } catch (err) {
+                alertBox.className = "cm-alert cm-alert-error";
+                alertBox.textContent = err.message || "Errore di accesso";
+            }
+        });
+
+        if (getToken() && getUser()) {
+            window.location.href = "dashboard.html";
+        }
     </script>
 </body>
 </html>

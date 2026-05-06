@@ -1,1 +1,28 @@
-<h1>Ciaoo</h1>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClasseMorta</title>
+    <link rel="icon" href="assets/logo.png">
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body class="cm-login-bg">
+    <main class="cm-login-card" style="text-align:center">
+        <a class="cm-brand" href="login.html">
+            <img src="assets/logo.png" alt="ClasseMorta">
+            <span class="cm-brand-text">
+                ClasseMorta
+                <small>Registro Elettronico</small>
+            </span>
+        </a>
+        <p class="cm-page-sub">Reindirizzamento in corso...</p>
+    </main>
+    <script src="app.js"></script>
+    <script>
+        window.location.href = (getToken() && getUser())
+            ? "dashboard.html"
+            : "login.html";
+    </script>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crea verifica - ClasseMorta</title>
+    <link rel="icon" href="assets/logo.png">
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+    <header class="cm-header"></header>
+
+    <main class="cm-main">
+        <h1 class="cm-page-title">Crea una nuova verifica</h1>
+        <p class="cm-page-sub">Scegli classe e materia, poi inserisci le domande aperte.</p>
+
+        <div class="cm-card">
+            <form id="form" class="cm-form">
+                <div class="cm-row">
+                    <div class="cm-field">
+                        <label for="classe">Classe</label>
+                        <select id="classe" class="cm-select" required></select>
+                    </div>
+                    <div class="cm-field">
+                        <label for="materia">Materia</label>
+                        <select id="materia" class="cm-select" required></select>
+                    </div>
+                </div>
+                <div class="cm-field">
+                    <label for="titolo">Titolo</label>
+                    <input id="titolo" class="cm-input" type="text" required
+                           placeholder="Es. Verifica del 12 maggio">
+                </div>
+                <div class="cm-field">
+                    <label for="descrizione">Descrizione (opzionale)</label>
+                    <textarea id="descrizione" class="cm-textarea"
+                              placeholder="Indicazioni per gli studenti..."></textarea>
+                </div>
+
+                <div>
+                    <h2 style="margin:20px 0 8px;color:var(--cm-red-800);font-size:1.05rem">Domande aperte</h2>
+                    <div id="domandeContainer"></div>
+                    <button type="button" class="cm-btn cm-btn-ghost cm-btn-sm cm-mt-12"
+                            onclick="addDomanda()">+ Aggiungi domanda</button>
+                </div>
+
+                <div id="alertBox" class="cm-alert hidden"></div>
+
+                <div class="cm-flex cm-gap-8">
+                    <button type="submit" class="cm-btn">Crea verifica</button>
+                    <a href="verifiche.html" class="cm-btn cm-btn-ghost">Annulla</a>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+    <script>
+        const user = requireAuth("professore");
+        let materieByClasse = {};
+
+        if (user) {
+            renderNavbar("verifiche");
+            init();
+        }
+
+        async function init() {
+            try {
+                const data = await apiFetch("/api/classi");
+                data.materie.forEach(m => {
+                    if (!materieByClasse[m.classe]) materieByClasse[m.classe] = [];
+                    materieByClasse[m.classe].push(m);
+                });
+                const sel = document.getElementById("classe");
+                data.classi.forEach(c => {
+                    const o = document.createElement("option");
+                    o.value = c; o.textContent = `Classe ${c}`;
+                    sel.appendChild(o);
+                });
+                sel.addEventListener("change", aggiornaMaterie);
+                aggiornaMaterie();
+                addDomanda();
+                addDomanda();
+                document.getElementById("form").addEventListener("submit", salva);
+            } catch (err) {
+                showAlert("alertBox", "error", err.message);
+            }
+        }
+
+        function aggiornaMaterie() {
+            const classe = document.getElementById("classe").value;
+            const sel = document.getElementById("materia");
+            sel.innerHTML = "";
+            (materieByClasse[classe] || []).forEach(m => {
+                const o = document.createElement("option");
+                o.value = m.id; o.textContent = m.nome;
+                sel.appendChild(o);
+            });
+        }
+
+        function addDomanda() {
+            const container = document.getElementById("domandeContainer");
+            const i = container.children.length + 1;
+            const wrap = document.createElement("div");
+            wrap.className = "cm-field";
+            wrap.style.marginBottom = "10px";
+            wrap.innerHTML = `
+                <label>Domanda ${i}</label>
+                <div style="display:flex;gap:8px">
+                    <textarea class="cm-textarea domanda-input" rows="2"
+                              placeholder="Testo della domanda..."></textarea>
+                    <button type="button" class="cm-btn cm-btn-ghost cm-btn-sm"
+                            onclick="this.parentElement.parentElement.remove()">&times;</button>
+                </div>
+            `;
+            container.appendChild(wrap);
+        }
+
+        async function salva(ev) {
+            ev.preventDefault();
+            const classe = document.getElementById("classe").value;
+            const materiaId = parseInt(document.getElementById("materia").value);
+            const titolo = document.getElementById("titolo").value.trim();
+            const descr  = document.getElementById("descrizione").value.trim();
+            const domande = [...document.querySelectorAll(".domanda-input")]
+                .map(t => t.value.trim())
+                .filter(t => t !== "");
+
+            if (!classe || !materiaId || !titolo || !domande.length) {
+                showAlert("alertBox", "error", "Compila tutti i campi e almeno una domanda.");
+                return;
+            }
+
+            try {
+                const out = await apiFetch("/api/verifiche", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        classe, materia_id: materiaId,
+                        titolo, descrizione: descr,
+                        domande,
+                    }),
+                });
+                showAlert("alertBox", "success", "Verifica creata!");
+                setTimeout(() => window.location.href = "verifiche.html", 600);
+            } catch (err) {
+                showAlert("alertBox", "error", err.message);
+            }
+        }
+
+        window.addDomanda = addDomanda;
+    </script>
+</body>
+</html>
