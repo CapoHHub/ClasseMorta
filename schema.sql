@@ -1,18 +1,3 @@
--- =========================================================
--- ClasseMorta - Schema Postgres
--- Progetto didattico: alcune scelte (es. password in chiaro,
--- query non parametrizzate sul login) sono volutamente
--- INSICURE per dimostrare le vulnerabilità.
--- =========================================================
-
--- Pulizia se necessario
-DROP TABLE IF EXISTS risposte CASCADE;
-DROP TABLE IF EXISTS domande CASCADE;
-DROP TABLE IF EXISTS verifiche CASCADE;
-DROP TABLE IF EXISTS insegnamenti CASCADE;
-DROP TABLE IF EXISTS materie CASCADE;
-DROP TABLE IF EXISTS studenti CASCADE;
-DROP TABLE IF EXISTS professori CASCADE;
 
 -- =========================================================
 -- Tabella professori
@@ -22,7 +7,6 @@ CREATE TABLE professori (
     nome VARCHAR(50) NOT NULL,
     cognome VARCHAR(50) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
-    -- ATTENZIONE: password in chiaro, scelta DIDATTICA per la SQL injection
     password VARCHAR(255) NOT NULL,
     data_creazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -81,8 +65,6 @@ CREATE TABLE domande (
 
 -- =========================================================
 -- Risposte degli studenti
--- ATTENZIONE: il campo testo viene salvato così com'è e poi
--- renderizzato lato professore tramite innerHTML => Stored XSS
 -- =========================================================
 CREATE TABLE risposte (
     id SERIAL PRIMARY KEY,

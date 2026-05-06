@@ -31,8 +31,6 @@ docker-compose up --build
 | Frontend | http://localhost:3000   |
 | Backend  | http://localhost:8080   |
 
-> Lo `schema.sql` è già caricato su Neon. Se vuoi resettare la base dati,
-> esegui di nuovo `schema.sql` su Postgres.
 
 ---
 
