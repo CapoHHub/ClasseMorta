@@ -23,9 +23,12 @@ class VotiController {
 
         $filtro = [];
         if (isset($_GET['studente_id'])) {
-            // ⚠️ Volutamente NON normalizzato: se è array (es. ['$ne' => null])
-            //    finisce direttamente nel filtro Mongo.
-            $filtro['studente_id'] = $_GET['studente_id'];
+            $raw = $_GET['studente_id'];
+            // I documenti hanno studente_id come intero: per il caso d'uso
+            // normale castiamo. Se invece arriva un array (payload NoSQLi tipo
+            // studente_id[$ne]=null) lo lasciamo passare com'è: vulnerabilità
+            // volontaria.
+            $filtro['studente_id'] = is_scalar($raw) ? (int) $raw : $raw;
         }
         if (isset($_GET['materia']) && $_GET['materia'] !== '') {
             $filtro['materia'] = $_GET['materia'];

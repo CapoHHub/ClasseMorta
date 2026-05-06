@@ -1,19 +1,40 @@
 <?php
 
+/**
+ * Carica la configurazione da .env (locale) e/o dalle env vars del processo
+ * (Railway, Heroku, ecc.). Le env vars del processo hanno priorità solo se
+ * il valore corrispondente nel .env è assente.
+ */
 function loadEnv(): array {
     static $env = null;
     if ($env !== null) {
         return $env;
     }
+
+    $env = [];
     $path = __DIR__ . '/../../.env';
-    if (!file_exists($path)) {
-        throw new RuntimeException("File .env non trovato in $path");
+    if (file_exists($path)) {
+        $parsed = parse_ini_file($path);
+        if (is_array($parsed)) {
+            $env = $parsed;
+        }
     }
-    $parsed = parse_ini_file($path);
-    if ($parsed === false) {
-        throw new RuntimeException("Impossibile leggere il file .env");
+
+    $keys = [
+        'PGHOST','PGDATABASE','PGUSER','PGPASSWORD','PGPORT','PGSSLMODE',
+        'PGCHANNELBINDING','MONGO_URI','MONGO_DB','JWT_SECRET',
+    ];
+    foreach ($keys as $k) {
+        if (!isset($env[$k]) || $env[$k] === '') {
+            $val = getenv($k);
+            if ($val === false || $val === '') {
+                $val = $_ENV[$k] ?? '';
+            }
+            if ($val !== '') {
+                $env[$k] = $val;
+            }
+        }
     }
-    $env = $parsed;
     return $env;
 }
 
@@ -23,12 +44,17 @@ function getPDO(): PDO {
         return $pdo;
     }
     $env = loadEnv();
-    $host    = $env["PGHOST"];
-    $dbname  = $env["PGDATABASE"];
-    $port    = $env["PGPORT"];
-    $user    = $env["PGUSER"];
-    $pass    = $env["PGPASSWORD"];
-    $sslmode = $env["PGSSLMODE"] ?? "require";
+    foreach (['PGHOST','PGDATABASE','PGPORT','PGUSER','PGPASSWORD'] as $req) {
+        if (empty($env[$req])) {
+            throw new RuntimeException("Variabile $req non configurata");
+        }
+    }
+    $host    = $env['PGHOST'];
+    $dbname  = $env['PGDATABASE'];
+    $port    = $env['PGPORT'];
+    $user    = $env['PGUSER'];
+    $pass    = $env['PGPASSWORD'];
+    $sslmode = $env['PGSSLMODE'] ?? 'require';
 
     $pdo = new PDO(
         "pgsql:host=$host;port=$port;dbname=$dbname;sslmode=$sslmode",

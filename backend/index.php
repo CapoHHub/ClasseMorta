@@ -138,5 +138,10 @@ try {
     }
 } catch (Throwable $e) {
     http_response_code(500);
-    echo json_encode(['message' => 'Errore interno', 'error' => $e->getMessage()]);
+    error_log('[ClasseMorta] ' . get_class($e) . ': ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+    echo json_encode([
+        'message' => 'Errore interno',
+        'error'   => $e->getMessage(),
+        'type'    => get_class($e),
+    ]);
 }

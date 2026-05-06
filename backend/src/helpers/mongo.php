@@ -18,7 +18,14 @@ function getMongoManager(): MongoDB\Driver\Manager {
 
 function getMongoDbName(): string {
     $env = loadEnv();
-    return $env["MONGO_DB"] ?? "classemorta";
+    $name = $env["MONGO_DB"] ?? "classeMorta";
+    // Safety net: il database su Atlas è "classeMorta" (con M maiuscola).
+    // Mongo è case-sensitive sui nomi: se per errore la env arriva tutta
+    // minuscola la normalizziamo.
+    if (strtolower($name) === "classemorta") {
+        $name = "classeMorta";
+    }
+    return $name;
 }
 
 function mongoNamespace(string $collection): string {

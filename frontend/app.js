@@ -1,6 +1,5 @@
 /* =================================================================
    ClasseMorta - app.js
-   Modulo condiviso: gestione JWT, fetch API, navbar dinamica.
    ================================================================= */
 
 const API_URL = window.location.hostname === "localhost"
@@ -8,6 +7,16 @@ const API_URL = window.location.hostname === "localhost"
     : window.location.origin;
 
 window.API_URL = API_URL;
+
+function buildApiError(status, data) {
+    const baseMsg = (data && data.message) || `Errore HTTP ${status}`;
+    const detail  = (data && data.error)   ? ` (${data.error})` : "";
+    const err = new Error(baseMsg + detail);
+    err.status = status;
+    err.data = data;
+    if (data) console.error("API error:", data);
+    return err;
+}
 
 // ---------------- AUTH STORAGE ----------------
 const TOKEN_KEY = "classemorta_jwt";
@@ -40,7 +49,6 @@ function isStud() {
     return u && u.ruolo === "studente";
 }
 
-// ---------------- API REQUEST (fetch + JWT) ----------------
 async function apiFetch(endpoint, options = {}) {
     const headers = Object.assign({}, options.headers || {});
     const token = getToken();
@@ -65,23 +73,11 @@ async function apiFetch(endpoint, options = {}) {
         }
     }
     if (!res.ok) {
-        const err = new Error((data && data.message) || `Errore HTTP ${res.status}`);
-        err.status = res.status;
-        err.data = data;
-        throw err;
+        throw buildApiError(res.status, data);
     }
     return data;
 }
 
-/**
- * Versione XMLHttpRequest (asincrona) usata per dimostrare
- * la tecnologia richiesta nella consegna del progetto.
- *
- * @param {string} method
- * @param {string} endpoint
- * @param {object|null} body
- * @returns {Promise<any>}
- */
 function apiXHR(method, endpoint, body = null) {
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -104,10 +100,7 @@ function apiXHR(method, endpoint, body = null) {
             if (xhr.status >= 200 && xhr.status < 300) {
                 resolve(data);
             } else {
-                const err = new Error((data && data.message) || `Errore HTTP ${xhr.status}`);
-                err.status = xhr.status;
-                err.data = data;
-                reject(err);
+                reject(buildApiError(xhr.status, data));
             }
         };
         xhr.onerror = () => reject(new Error("Errore di rete"));
@@ -195,11 +188,9 @@ function escapeHtml(s) {
 function votoClass(voto) {
     const v = parseFloat(voto);
     if (isNaN(v)) return "";
-    if (v < 5)  return "cm-voto-grav";
-    if (v < 6)  return "cm-voto-insuf";
-    if (v < 7)  return "cm-voto-suf";
-    if (v < 9)  return "cm-voto-buon";
-    return "cm-voto-ottimo";
+    if (v < 5)  return "cm-voto-rosso";
+    if (v <= 6) return "cm-voto-giallo";
+    return "cm-voto-verde";
 }
 
 function showAlert(elementId, type, msg) {

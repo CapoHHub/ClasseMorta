@@ -185,6 +185,7 @@ a:hover { text-decoration: underline; }
     border-radius: 14px;
     padding: 22px;
     border: 1px solid var(--cm-border);
+    border-top: 4px solid var(--cm-red-600);
     box-shadow: 0 4px 14px -8px rgba(107, 0, 20, 0.15);
     transition: transform 0.15s, box-shadow 0.15s;
     color: var(--cm-text);
@@ -195,15 +196,7 @@ a:hover { text-decoration: underline; }
     box-shadow: var(--cm-shadow);
     text-decoration: none;
     border-color: var(--cm-red-500);
-}
-.cm-tile-icon {
-    width: 46px; height: 46px;
-    border-radius: 10px;
-    display: grid; place-items: center;
-    font-size: 1.4rem;
-    background: var(--cm-red-100);
-    color: var(--cm-red-700);
-    margin-bottom: 12px;
+    border-top-color: var(--cm-red-700);
 }
 .cm-tile h3 { margin: 0 0 6px; color: var(--cm-red-800); }
 .cm-tile p { margin: 0; color: var(--cm-muted); font-size: 0.92rem; }
@@ -259,8 +252,7 @@ a:hover { text-decoration: underline; }
 }
 .cm-radio-option:hover { border-color: var(--cm-red-500); }
 .cm-radio-option input { display: none; }
-.cm-radio-option .icon { font-size: 1.6rem; margin-bottom: 4px; }
-.cm-radio-option b { display: block; color: var(--cm-red-800); font-size: 0.95rem; }
+.cm-radio-option b { display: block; color: var(--cm-red-800); font-size: 1rem; margin-bottom: 2px; }
 .cm-radio-option small { color: var(--cm-muted); font-size: 0.78rem; }
 .cm-radio-option.selected {
     border-color: var(--cm-red-600);
@@ -342,11 +334,9 @@ a:hover { text-decoration: underline; }
     color: white;
     font-size: 0.95rem;
 }
-.cm-voto-grav   { background: #7d0a1e; }   /* bordeaux per gravemente insufficiente */
-.cm-voto-insuf  { background: var(--cm-red-600); }
-.cm-voto-suf    { background: #2e8b57; }
-.cm-voto-buon   { background: #1f7a4a; }
-.cm-voto-ottimo { background: var(--cm-accent-dk); }
+.cm-voto-rosso  { background: #c8102e; color: white; }
+.cm-voto-giallo { background: #f0b400; color: #1f1f24; }
+.cm-voto-verde  { background: #1f7a4a; color: white; }
 
 /* ============== ALERT / MESSAGGI ============== */
 .cm-alert {
