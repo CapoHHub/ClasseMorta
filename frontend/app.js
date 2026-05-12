@@ -2,9 +2,10 @@
    ClasseMorta - app.js
    ================================================================= */
 
-const API_URL = window.location.hostname === "localhost"
+const API_URL =
+  window.location.hostname === "localhost"
     ? "http://localhost:8080"
-    : window.location.origin;
+    : "classemorta-production.up.railway.app";
 
 window.API_URL = API_URL;
 
