@@ -103,22 +103,43 @@ ClasseMorta/
 Tutte le risposte sono in JSON. Le rotte protette richiedono header
 `Authorization: Bearer <token>`.
 
-| Metodo | Endpoint | Ruolo | Descrizione |
-|--------|----------|-------|-------------|
-| POST   | `/api/login` | pubblico | Login (`{email, password, ruolo}`). Restituisce JWT. |
-| GET    | `/api/me`    | auth | Dati dell'utente loggato dal token |
-| GET    | `/api/classi` | prof | Classi e materie insegnate dal prof loggato |
-| GET    | `/api/studenti?classe=5A` | prof | Studenti della classe |
-| GET    | `/api/studenti/:id` | prof | Singolo studente |
-| GET    | `/api/voti?studente_id=:id` | prof / studente | Voti dello studente (Mongo) |
-| GET    | `/api/voti/me` | studente | Voti propri |
-| POST   | `/api/voti`    | prof | Inserisce voto |
-| DELETE | `/api/voti/:id` | prof | Elimina voto |
-| GET    | `/api/verifiche` | auth | Verifiche (lista contestuale al ruolo) |
-| POST   | `/api/verifiche` | prof | Crea verifica con domande |
-| GET    | `/api/verifiche/:id` | auth | Dettaglio verifica + domande |
-| POST   | `/api/verifiche/:id/risposte` | studente | Consegna risposte |
-| GET    | `/api/verifiche/:id/risposte` | prof | Tutte le risposte |
+### Provala con il tuo client API
+
+Importa la collezione [`backend/scripts/classemorta.postman_collection.json`](backend/scripts/classemorta.postman_collection.json)
+nel client che preferisci. Include: tutti gli endpoint, credenziali demo, payload di
+SQLi / NoSQLi / XSS, e uno script post-request che salva automaticamente il
+JWT dopo il login.
+
+[![Postman](https://img.shields.io/badge/▶_Importa_in-Postman-FF6C37?style=for-the-badge&logo=postman&logoColor=white)](backend/scripts/classemorta.postman_collection.json)
+[![Apidog](https://img.shields.io/badge/▶_Importa_in-Apidog-FB8B23?style=for-the-badge)](backend/scripts/classemorta.postman_collection.json)
+[![Insomnia](https://img.shields.io/badge/▶_Importa_in-Insomnia-5849BE?style=for-the-badge&logo=insomnia&logoColor=white)](backend/scripts/classemorta.postman_collection.json)
+[![Hoppscotch](https://img.shields.io/badge/▶_Apri_in-Hoppscotch-1ABC9C?style=for-the-badge)](https://hoppscotch.io/)
+
+> La variabile di collezione `baseUrl` punta di default a `https://classemorta-production.up.railway.app`.
+> Cambiala se hai un dominio diverso.
+
+### Elenco endpoint
+
+Cliccando "▶ Try" apri Hoppscotch (web client, no signup) con metodo e URL
+già pre-compilati: ti basta incollare il JWT nel tab *Authorization → Bearer*
+e premere Send.
+
+| Metodo | Endpoint | Ruolo | Descrizione | |
+|--------|----------|-------|-------------|---|
+| POST   | `/api/login` | pubblico | Login (`{email, password, ruolo}`). Restituisce JWT. | [▶ Try](https://hoppscotch.io/?method=POST&url=https%3A%2F%2Fclassemorta-production.up.railway.app%2Fapi%2Flogin) |
+| GET    | `/api/me`    | auth | Dati dell'utente loggato dal token | [▶ Try](https://hoppscotch.io/?method=GET&url=https%3A%2F%2Fclassemorta-production.up.railway.app%2Fapi%2Fme) |
+| GET    | `/api/classi` | prof | Classi e materie insegnate dal prof loggato | [▶ Try](https://hoppscotch.io/?method=GET&url=https%3A%2F%2Fclassemorta-production.up.railway.app%2Fapi%2Fclassi) |
+| GET    | `/api/studenti?classe=5A` | prof | Studenti della classe | [▶ Try](https://hoppscotch.io/?method=GET&url=https%3A%2F%2Fclassemorta-production.up.railway.app%2Fapi%2Fstudenti%3Fclasse%3D5A) |
+| GET    | `/api/studenti/:id` | prof | Singolo studente | [▶ Try](https://hoppscotch.io/?method=GET&url=https%3A%2F%2Fclassemorta-production.up.railway.app%2Fapi%2Fstudenti%2F1) |
+| GET    | `/api/voti?studente_id=:id` | prof / studente | Voti dello studente (Mongo) | [▶ Try](https://hoppscotch.io/?method=GET&url=https%3A%2F%2Fclassemorta-production.up.railway.app%2Fapi%2Fvoti%3Fstudente_id%3D1) |
+| GET    | `/api/voti/me` | studente | Voti propri | [▶ Try](https://hoppscotch.io/?method=GET&url=https%3A%2F%2Fclassemorta-production.up.railway.app%2Fapi%2Fvoti%2Fme) |
+| POST   | `/api/voti`    | prof | Inserisce voto | [▶ Try](https://hoppscotch.io/?method=POST&url=https%3A%2F%2Fclassemorta-production.up.railway.app%2Fapi%2Fvoti) |
+| DELETE | `/api/voti/:id` | prof | Elimina voto | [▶ Try](https://hoppscotch.io/?method=DELETE&url=https%3A%2F%2Fclassemorta-production.up.railway.app%2Fapi%2Fvoti%2FOBJECTID) |
+| GET    | `/api/verifiche` | auth | Verifiche (lista contestuale al ruolo) | [▶ Try](https://hoppscotch.io/?method=GET&url=https%3A%2F%2Fclassemorta-production.up.railway.app%2Fapi%2Fverifiche) |
+| POST   | `/api/verifiche` | prof | Crea verifica con domande | [▶ Try](https://hoppscotch.io/?method=POST&url=https%3A%2F%2Fclassemorta-production.up.railway.app%2Fapi%2Fverifiche) |
+| GET    | `/api/verifiche/:id` | auth | Dettaglio verifica + domande | [▶ Try](https://hoppscotch.io/?method=GET&url=https%3A%2F%2Fclassemorta-production.up.railway.app%2Fapi%2Fverifiche%2F1) |
+| POST   | `/api/verifiche/:id/risposte` | studente | Consegna risposte | [▶ Try](https://hoppscotch.io/?method=POST&url=https%3A%2F%2Fclassemorta-production.up.railway.app%2Fapi%2Fverifiche%2F1%2Frisposte) |
+| GET    | `/api/verifiche/:id/risposte` | prof | Tutte le risposte | [▶ Try](https://hoppscotch.io/?method=GET&url=https%3A%2F%2Fclassemorta-production.up.railway.app%2Fapi%2Fverifiche%2F1%2Frisposte) |
 
 ---
 

