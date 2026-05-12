@@ -352,46 +352,252 @@ a:hover { text-decoration: underline; }
 .cm-alert-warn    { background: #fff8e1;           border-color: var(--cm-accent);   color: #785400; }
 .cm-alert.hidden  { display: none; }
 
-/* ============== LOGIN ============== */
+/* ============== LOGIN (stile ClasseViva) ============== */
 .cm-login-bg {
     min-height: 100vh;
-    background: linear-gradient(135deg, var(--cm-red-900), var(--cm-red-600));
-    display: grid;
-    place-items: center;
-    padding: 24px;
+    background: var(--cm-red-700);
+    background-image:
+        radial-gradient(ellipse at 50% 120%, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 60%),
+        linear-gradient(180deg, var(--cm-red-700) 0%, var(--cm-red-800) 100%);
+    color: white;
 }
-.cm-login-card {
+
+/* topbar scura */
+.cm-login-topbar {
+    background: var(--cm-red-900);
+    padding: 10px 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+.cm-login-topbar-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: white;
+}
+.cm-brand-mini {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: white;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+.cm-brand-mini:hover { text-decoration: none; opacity: 0.85; }
+.cm-brand-mini img {
+    width: 28px;
+    height: 28px;
     background: white;
+    border-radius: 6px;
+    padding: 2px;
+    object-fit: contain;
+}
+.cm-lang {
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.85);
+}
+
+.cm-login-shell {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 30px 24px 60px;
+}
+
+/* card bianca contenente form e SPID/CIE */
+.cm-login-card-v2 {
+    background: white;
+    color: var(--cm-text);
+    border-radius: 8px;
+    padding: 22px 26px 20px;
+    box-shadow: 0 18px 40px -10px rgba(0,0,0,0.35);
+}
+
+.cm-login-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 18px;
+    align-items: end;
+}
+@media (max-width: 760px) {
+    .cm-login-row { grid-template-columns: 1fr; }
+}
+
+.cm-login-col { display: flex; flex-direction: column; gap: 5px; }
+.cm-login-col-btn { min-width: 220px; }
+@media (max-width: 760px) { .cm-login-col-btn { min-width: 0; } }
+
+.cm-mini-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--cm-text);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+}
+.cm-forgot {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--cm-red-700);
+}
+
+.cm-btn-success {
+    background: #1f9d55;
+    color: white;
     width: 100%;
-    max-width: 440px;
-    border-radius: 18px;
-    box-shadow: 0 25px 55px -20px rgba(0,0,0,0.4);
-    padding: 36px 32px;
-    border-top: 4px solid var(--cm-red-700);
 }
-.cm-login-card .cm-brand {
-    color: var(--cm-red-800);
-    justify-content: center;
-    margin-bottom: 22px;
-    font-size: 1.4rem;
+.cm-btn-success:hover { background: #167942; }
+
+/* Tipo account: pill radio inline */
+.cm-account-type {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 16px 0 4px;
 }
-.cm-login-card .cm-brand img {
-    background: var(--cm-red-50);
-    width: 56px;
-    height: 56px;
-    border-radius: 14px;
-    box-shadow: none;
-    padding: 4px;
+.cm-account-type .cm-mini-label {
+    margin-right: 4px;
 }
-.cm-login-card h1 {
-    margin: 0 0 4px;
-    color: var(--cm-red-800);
-    font-size: 1.5rem;
+.cm-pill-radio {
+    border: 1px solid var(--cm-border);
+    border-radius: 999px;
+    padding: 6px 14px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--cm-text);
+    transition: 0.15s;
+    background: white;
+}
+.cm-pill-radio:hover { border-color: var(--cm-red-500); }
+.cm-pill-radio input { display: none; }
+.cm-pill-radio.selected {
+    background: var(--cm-red-700);
+    color: white;
+    border-color: var(--cm-red-700);
+}
+
+.cm-warn-text {
+    color: var(--cm-red-700);
+    font-size: 0.8rem;
+    margin: 10px 0 0;
+    font-style: italic;
+}
+
+/* divider "In alternativa" */
+.cm-divider {
+    position: relative;
     text-align: center;
+    color: var(--cm-muted);
+    font-size: 0.82rem;
+    margin: 18px 0 14px;
 }
-.cm-login-card .cm-page-sub {
+.cm-divider::before,
+.cm-divider::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: calc(50% - 70px);
+    height: 1px;
+    background: var(--cm-border);
+}
+.cm-divider::before { left: 0; }
+.cm-divider::after  { right: 0; }
+.cm-divider span { background: white; padding: 0 14px; }
+
+/* righe alternativa */
+.cm-alt-row {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr auto;
+    gap: 18px;
+    align-items: center;
+    padding: 6px 0;
+}
+.cm-alt-row + .cm-alt-row { padding-top: 10px; }
+@media (max-width: 760px) {
+    .cm-alt-row { grid-template-columns: 1fr; gap: 8px; }
+}
+
+.cm-alt-info {
+    font-size: 0.85rem;
+    color: var(--cm-text);
+    line-height: 1.4;
+}
+.cm-alt-links {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: right;
+    font-size: 0.82rem;
+}
+.cm-alt-links a { color: var(--cm-red-700); }
+@media (max-width: 760px) {
+    .cm-alt-links { text-align: left; }
+}
+
+.cm-alt-cta { min-width: 220px; }
+.cm-alt-cta .cm-btn-spid,
+.cm-alt-cta .cm-btn-cie { margin-bottom: 0; }
+@media (max-width: 760px) { .cm-alt-cta { min-width: 0; } }
+
+/* details credenziali demo */
+.cm-demo-creds {
+    margin-top: 18px;
+    border-top: 1px dashed var(--cm-border);
+    padding-top: 12px;
+    font-size: 0.82rem;
+    color: var(--cm-muted);
+}
+.cm-demo-creds summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--cm-red-700);
+}
+.cm-demo-creds > div {
+    padding-top: 8px;
+    line-height: 1.6;
+}
+
+/* HERO: logo gigante + motto */
+.cm-hero {
     text-align: center;
-    margin: 0 0 22px;
+    padding: 50px 24px 30px;
+    color: white;
+}
+.cm-hero-logo {
+    font-size: clamp(2.5rem, 6.5vw, 4.5rem);
+    font-weight: 800;
+    letter-spacing: 2px;
+    margin: 0;
+    color: white;
+    line-height: 1;
+    text-shadow: 0 4px 18px rgba(0,0,0,0.25);
+}
+.cm-hero-logo em {
+    font-style: italic;
+    font-weight: 800;
+    background: linear-gradient(180deg,
+        white 0%, white 25%,
+        var(--cm-red-700) 25%, var(--cm-red-700) 33%,
+        white 33%, white 58%,
+        var(--cm-red-700) 58%, var(--cm-red-700) 66%,
+        white 66%, white 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    padding-left: 4px;
+}
+.cm-hero-motto {
+    margin: 18px 0 0;
+    font-size: clamp(1.1rem, 2.2vw, 1.5rem);
+    font-style: italic;
+    line-height: 1.4;
+    color: rgba(255,255,255,0.95);
+}
+.cm-hero-motto span {
+    font-weight: 500;
 }
 
 /* ============== LOGIN: SPID / CIE ============== */
@@ -421,9 +627,9 @@ a:hover { text-decoration: underline; }
 .cm-btn-cie {
     width: 100%;
     border: none;
-    border-radius: 8px;
-    padding: 11px 16px;
-    font-size: 0.95rem;
+    border-radius: 6px;
+    padding: 10px 16px;
+    font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
     display: flex;
@@ -432,7 +638,6 @@ a:hover { text-decoration: underline; }
     gap: 10px;
     font-family: inherit;
     transition: 0.15s;
-    margin-bottom: 10px;
     color: white;
     letter-spacing: 0.2px;
 }

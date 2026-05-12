@@ -9,74 +9,121 @@
 </head>
 <body class="cm-login-bg">
 
-    <main class="cm-login-card">
-        <a class="cm-brand" href="login.html">
-            <img src="assets/logo.png" alt="ClasseMorta">
-            <span class="cm-brand-text">
-                ClasseMorta
-                <small>Registro Elettronico</small>
-            </span>
-        </a>
+    <header class="cm-login-topbar">
+        <div class="cm-login-topbar-inner">
+            <a class="cm-brand-mini" href="login.html">
+                <img src="assets/logo.png" alt="ClasseMorta">
+                <span>ClasseMorta</span>
+            </a>
+            <span class="cm-lang">Italia &middot; IT</span>
+        </div>
+    </header>
 
-        <h1>Accedi al registro</h1>
-        <p class="cm-page-sub">Inserisci le tue credenziali scolastiche.</p>
+    <div class="cm-login-shell">
 
-        <form id="loginForm" class="cm-form" autocomplete="off">
+        <main class="cm-login-card-v2">
 
-            <div class="cm-field">
-                <label>Tipo di account</label>
-                <div class="cm-radio-group">
-                    <label class="cm-radio-option selected" data-ruolo="studente">
+            <form id="loginForm" autocomplete="off">
+
+                <div class="cm-login-row">
+                    <div class="cm-login-col">
+                        <label class="cm-mini-label" for="email">Codice Personale / Email</label>
+                        <input class="cm-input" type="text" id="email" name="email"
+                               placeholder="Codice Personale / Email" required>
+                    </div>
+
+                    <div class="cm-login-col">
+                        <label class="cm-mini-label" for="password">
+                            Password
+                            <a href="#" onclick="event.preventDefault()" class="cm-forgot">
+                                Password dimenticata?
+                            </a>
+                        </label>
+                        <input class="cm-input" type="password" id="password" name="password"
+                               placeholder="Password" required>
+                    </div>
+
+                    <div class="cm-login-col-btn">
+                        <button type="submit" class="cm-btn cm-btn-success">
+                            Entra con le credenziali
+                        </button>
+                    </div>
+                </div>
+
+                <div class="cm-account-type">
+                    <span class="cm-mini-label">Tipo di account:</span>
+                    <label class="cm-pill-radio selected" data-ruolo="studente">
                         <input type="radio" name="ruolo" value="studente" checked>
-                        <b>Studente</b>
+                        Studente
                     </label>
-                    <label class="cm-radio-option" data-ruolo="professore">
+                    <label class="cm-pill-radio" data-ruolo="professore">
                         <input type="radio" name="ruolo" value="professore">
-                        <b>Professore</b>
+                        Professore
                     </label>
+                </div>
+
+                <p class="cm-warn-text">
+                    Attenzione: Dopo 5 tentativi di login con credenziali errate
+                    l'accesso sarà sospeso per 60 minuti.
+                </p>
+            </form>
+
+            <div id="loginAlert" class="cm-alert hidden"></div>
+
+            <div class="cm-divider"><span>In alternativa</span></div>
+
+            <div class="cm-alt-row">
+                <div class="cm-alt-info">
+                    Solo per le scuole statali si potrà accedere tramite SPID e CIE.<br>
+                    <small class="cm-text-muted">&rsaquo; Il servizio è offerto dal Ministero dell'Istruzione.</small>
+                </div>
+                <div class="cm-alt-links">
+                    <a href="#" onclick="event.preventDefault()">Maggiori informazioni su SPID</a>
+                    <a href="#" onclick="event.preventDefault()">Non hai SPID?</a>
+                </div>
+                <div class="cm-alt-cta">
+                    <button type="button" class="cm-btn-spid" onclick="apriQrModal('spid')">
+                        Entra con SPID
+                    </button>
                 </div>
             </div>
 
-            <div class="cm-field">
-                <label for="email">Email</label>
-                <input class="cm-input" type="text" id="email" name="email"
-                       placeholder="nome.cognome@scuola.it" required>
+            <div class="cm-alt-row">
+                <div class="cm-alt-info"></div>
+                <div class="cm-alt-links">
+                    <a href="#" onclick="event.preventDefault()">Maggiori informazioni sulla CIE</a>
+                    <a href="#" onclick="event.preventDefault()">Non hai la CIE?</a>
+                </div>
+                <div class="cm-alt-cta">
+                    <button type="button" class="cm-btn-cie" onclick="apriQrModal('cie')">
+                        Entra con CIE
+                    </button>
+                </div>
             </div>
 
-            <div class="cm-field">
-                <label for="password">Password</label>
-                <input class="cm-input" type="password" id="password" name="password"
-                       placeholder="La tua password" required>
-            </div>
+            <details class="cm-demo-creds">
+                <summary>Credenziali demo</summary>
+                <div>
+                    <b>Professori:</b><br>
+                    mario.rossi@scuola.it / prof123<br>
+                    elena.bianchi@scuola.it / prof123<br><br>
+                    <b>Studenti:</b><br>
+                    luca.verdi@studenti.it / studente1<br>
+                    sofia.neri@studenti.it / studente2<br>
+                    marco.gialli@studenti.it / studente3<br>
+                    anna.blu@studenti.it / studente4
+                </div>
+            </details>
+        </main>
 
-            <button type="submit" class="cm-btn">Accedi</button>
-        </form>
-
-        <div id="loginAlert" class="cm-alert hidden"></div>
-
-        <div class="cm-divider"><span>oppure</span></div>
-
-        <button type="button" class="cm-btn-spid" onclick="apriQrModal('spid')">
-            Entra con SPID
-        </button>
-        <button type="button" class="cm-btn-cie" onclick="apriQrModal('cie')">
-            Entra con CIE
-        </button>
-
-        <details class="cm-mt-20" style="font-size:0.85rem; color: var(--cm-muted);">
-            <summary style="cursor:pointer; font-weight:600;">Credenziali demo</summary>
-            <div style="padding-top:8px; line-height:1.6;">
-                <b>Professori:</b><br>
-                mario.rossi@scuola.it / prof123<br>
-                elena.bianchi@scuola.it / prof123<br><br>
-                <b>Studenti:</b><br>
-                luca.verdi@studenti.it / studente1<br>
-                sofia.neri@studenti.it / studente2<br>
-                marco.gialli@studenti.it / studente3<br>
-                anna.blu@studenti.it / studente4
-            </div>
-        </details>
-    </main>
+        <section class="cm-hero">
+            <h1 class="cm-hero-logo">CLASSE<em>MORTA</em></h1>
+            <p class="cm-hero-motto">
+                Il cuore pulsante<br>
+                <span>della scuola del passato</span>
+            </p>
+        </section>
+    </div>
 
     <div id="qrModal" class="cm-modal hidden"
          onclick="if(event.target===this)chiudiQrModal()">
@@ -95,8 +142,8 @@
     <script src="app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
     <script>
-        const MEME_URL_SPID = "https://i.redd.it/compreresti-questi-giochi-v0-2uies1jtavjd1.jpg?width=1080&format=pjpg&auto=webp&s=0f13e6b2763e501fc73269f26de4640e96679a82";
-        const MEME_URL_CIE  = "https://i.redd.it/compreresti-questi-giochi-v0-2uies1jtavjd1.jpg?width=1080&format=pjpg&auto=webp&s=0f13e6b2763e501fc73269f26de4640e96679a82";
+        const MEME_URL_SPID = "https://www.reddit.com/media?url=https%3A%2F%2Fi.redd.it%2Fcompreresti-questi-giochi-v0-2uies1jtavjd1.jpg%3Fwidth%3D1080%26format%3Dpjpg%26auto%3Dwebp%26s%3D0f13e6b2763e501fc73269f26de4640e96679a82";
+        const MEME_URL_CIE  = "https://www.reddit.com/media?url=https%3A%2F%2Fi.redd.it%2Fcompreresti-questi-giochi-v0-2uies1jtavjd1.jpg%3Fwidth%3D1080%26format%3Dpjpg%26auto%3Dwebp%26s%3D0f13e6b2763e501fc73269f26de4640e96679a82";
 
         function apriQrModal(metodo) {
             const url = metodo === "spid" ? MEME_URL_SPID : MEME_URL_CIE;
@@ -117,9 +164,9 @@
             if (e.key === "Escape") chiudiQrModal();
         });
 
-        document.querySelectorAll(".cm-radio-option").forEach(opt => {
+        document.querySelectorAll(".cm-pill-radio").forEach(opt => {
             opt.addEventListener("click", () => {
-                document.querySelectorAll(".cm-radio-option").forEach(o => o.classList.remove("selected"));
+                document.querySelectorAll(".cm-pill-radio").forEach(o => o.classList.remove("selected"));
                 opt.classList.add("selected");
                 opt.querySelector("input").checked = true;
             });
