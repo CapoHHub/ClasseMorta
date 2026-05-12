@@ -54,6 +54,15 @@
 
         <div id="loginAlert" class="cm-alert hidden"></div>
 
+        <div class="cm-divider"><span>oppure</span></div>
+
+        <button type="button" class="cm-btn-spid" onclick="apriQrModal('spid')">
+            Entra con SPID
+        </button>
+        <button type="button" class="cm-btn-cie" onclick="apriQrModal('cie')">
+            Entra con CIE
+        </button>
+
         <details class="cm-mt-20" style="font-size:0.85rem; color: var(--cm-muted);">
             <summary style="cursor:pointer; font-weight:600;">Credenziali demo</summary>
             <div style="padding-top:8px; line-height:1.6;">
@@ -69,8 +78,45 @@
         </details>
     </main>
 
+    <div id="qrModal" class="cm-modal hidden"
+         onclick="if(event.target===this)chiudiQrModal()">
+        <div class="cm-modal-card">
+            <button class="cm-modal-close" onclick="chiudiQrModal()"
+                    aria-label="Chiudi">&times;</button>
+            <h2 id="qrTitle">Accedi</h2>
+            <p class="cm-page-sub" id="qrSub">
+                Inquadra il codice QR con la tua app per autenticarti.
+            </p>
+            <div id="qrcode" class="cm-qr-wrapper"></div>
+            <p class="cm-text-small cm-text-muted">In attesa di scansione...</p>
+        </div>
+    </div>
+
     <script src="app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
     <script>
+        const MEME_URL_SPID = "https://i.redd.it/compreresti-questi-giochi-v0-2uies1jtavjd1.jpg?width=1080&format=pjpg&auto=webp&s=0f13e6b2763e501fc73269f26de4640e96679a82";
+        const MEME_URL_CIE  = "https://i.redd.it/compreresti-questi-giochi-v0-2uies1jtavjd1.jpg?width=1080&format=pjpg&auto=webp&s=0f13e6b2763e501fc73269f26de4640e96679a82";
+
+        function apriQrModal(metodo) {
+            const url = metodo === "spid" ? MEME_URL_SPID : MEME_URL_CIE;
+            const titolo = metodo === "spid" ? "Accedi con SPID" : "Accedi con CIE";
+            document.getElementById("qrTitle").textContent = titolo;
+
+            const qr = qrcode(0, "M");
+            qr.addData(url);
+            qr.make();
+            document.getElementById("qrcode").innerHTML = qr.createImgTag(6, 0);
+
+            document.getElementById("qrModal").classList.remove("hidden");
+        }
+        function chiudiQrModal() {
+            document.getElementById("qrModal").classList.add("hidden");
+        }
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") chiudiQrModal();
+        });
+
         document.querySelectorAll(".cm-radio-option").forEach(opt => {
             opt.addEventListener("click", () => {
                 document.querySelectorAll(".cm-radio-option").forEach(o => o.classList.remove("selected"));

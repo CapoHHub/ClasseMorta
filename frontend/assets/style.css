@@ -394,6 +394,126 @@ a:hover { text-decoration: underline; }
     margin: 0 0 22px;
 }
 
+/* ============== LOGIN: SPID / CIE ============== */
+.cm-divider {
+    position: relative;
+    text-align: center;
+    color: var(--cm-muted);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 20px 0 14px;
+}
+.cm-divider::before,
+.cm-divider::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: calc(50% - 35px);
+    height: 1px;
+    background: var(--cm-border);
+}
+.cm-divider::before { left: 0; }
+.cm-divider::after  { right: 0; }
+.cm-divider span { background: white; padding: 0 12px; }
+
+.cm-btn-spid,
+.cm-btn-cie {
+    width: 100%;
+    border: none;
+    border-radius: 8px;
+    padding: 11px 16px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-family: inherit;
+    transition: 0.15s;
+    margin-bottom: 10px;
+    color: white;
+    letter-spacing: 0.2px;
+}
+.cm-btn-spid {
+    background: #0066cc;
+}
+.cm-btn-spid:hover { background: #004f9c; }
+.cm-btn-cie {
+    background: #1a3a6e;
+}
+.cm-btn-cie:hover { background: #0f2750; }
+.cm-btn-spid::before,
+.cm-btn-cie::before {
+    background: white;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+}
+.cm-btn-spid::before { content: "SPID"; color: #0066cc; }
+.cm-btn-cie::before  { content: "CIE";  color: #1a3a6e; }
+
+/* ============== MODAL QR ============== */
+.cm-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: grid;
+    place-items: center;
+    z-index: 100;
+    padding: 24px;
+}
+.cm-modal.hidden { display: none; }
+.cm-modal-card {
+    background: white;
+    border-radius: 16px;
+    padding: 28px 28px 24px;
+    max-width: 360px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 25px 55px -10px rgba(0, 0, 0, 0.5);
+    position: relative;
+    border-top: 4px solid var(--cm-red-700);
+}
+.cm-modal-card h2 {
+    margin: 0 0 4px;
+    color: var(--cm-red-800);
+    font-size: 1.25rem;
+}
+.cm-modal-close {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    background: transparent;
+    border: none;
+    font-size: 1.6rem;
+    cursor: pointer;
+    color: var(--cm-muted);
+    line-height: 1;
+    padding: 4px 10px;
+    border-radius: 6px;
+}
+.cm-modal-close:hover {
+    background: var(--cm-red-50);
+    color: var(--cm-red-700);
+}
+.cm-qr-wrapper {
+    margin: 18px auto 10px;
+    padding: 14px;
+    background: white;
+    border: 1px solid var(--cm-border);
+    border-radius: 12px;
+    display: inline-block;
+}
+.cm-qr-wrapper img {
+    display: block;
+    width: 200px;
+    height: 200px;
+}
+
 /* ============== UTILS ============== */
 .cm-flex { display: flex; }
 .cm-flex-between { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
