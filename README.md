@@ -103,20 +103,6 @@ ClasseMorta/
 Tutte le risposte sono in JSON. Le rotte protette richiedono header
 `Authorization: Bearer <token>`.
 
-### Provala con il tuo client API
-
-Importa la collezione [`backend/scripts/classemorta.postman_collection.json`](backend/scripts/classemorta.postman_collection.json)
-nel client che preferisci. Include: tutti gli endpoint, credenziali demo, payload di
-SQLi / NoSQLi / XSS, e uno script post-request che salva automaticamente il
-JWT dopo il login.
-
-[![Postman](https://img.shields.io/badge/▶_Importa_in-Postman-FF6C37?style=for-the-badge&logo=postman&logoColor=white)](backend/scripts/classemorta.postman_collection.json)
-[![Apidog](https://img.shields.io/badge/▶_Importa_in-Apidog-FB8B23?style=for-the-badge)](backend/scripts/classemorta.postman_collection.json)
-[![Insomnia](https://img.shields.io/badge/▶_Importa_in-Insomnia-5849BE?style=for-the-badge&logo=insomnia&logoColor=white)](backend/scripts/classemorta.postman_collection.json)
-[![Hoppscotch](https://img.shields.io/badge/▶_Apri_in-Hoppscotch-1ABC9C?style=for-the-badge)](https://hoppscotch.io/)
-
-> La variabile di collezione `baseUrl` punta di default a `https://classemorta-production.up.railway.app`.
-> Cambiala se hai un dominio diverso.
 
 ### Elenco endpoint
 
