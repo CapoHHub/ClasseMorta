@@ -50,4 +50,29 @@ class Voti {
         }
         return mongoDeleteOne('voti', ['_id' => $oid]);
     }
+
+    public function findById(string $id): ?array {
+        try {
+            $oid = new MongoDB\BSON\ObjectId($id);
+        } catch (Throwable $e) {
+            return null;
+        }
+        return mongoFindOne('voti', ['_id' => $oid]);
+    }
+
+    /**
+     * Aggiorna i campi indicati di un voto esistente.
+     *
+     * @param string $id  ObjectId del documento
+     * @param array  $set Campi consentiti già validati (voto, materia, descrizione, ...)
+     * @return int 0 se non modificato, 1 se aggiornato
+     */
+    public function aggiorna(string $id, array $set): int {
+        try {
+            $oid = new MongoDB\BSON\ObjectId($id);
+        } catch (Throwable $e) {
+            return 0;
+        }
+        return mongoUpdateOne('voti', ['_id' => $oid], $set);
+    }
 }

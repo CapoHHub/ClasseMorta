@@ -92,6 +92,10 @@ try {
                 (new VotiController())->crea();
                 break;
             }
+            if ($method === 'PUT' && $sub !== null) {
+                (new VotiController())->aggiorna($sub);
+                break;
+            }
             if ($method === 'DELETE' && $sub !== null) {
                 (new VotiController())->elimina($sub);
                 break;

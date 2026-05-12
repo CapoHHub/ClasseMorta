@@ -88,6 +88,88 @@ class VotiController {
     }
 
     /**
+     * PUT /api/voti/:id
+     *
+     * Solo professori. Body JSON con i campi da aggiornare (almeno uno):
+     *   { voto?: number, materia?: string, descrizione?: string }
+     *
+     * Il professore può aggiornare un voto solo se insegna alla classe
+     * dello studente intestatario del voto.
+     */
+    public function aggiorna(string $id): void {
+        $auth = richiediAuth(['professore']);
+        $body = json_decode(file_get_contents('php://input'), true);
+        if (!is_array($body)) {
+            http_response_code(400);
+            echo json_encode(['message' => 'Body JSON non valido']);
+            return;
+        }
+
+        $model = new Voti();
+        $voto = $model->findById($id);
+        if (!$voto) {
+            http_response_code(404);
+            echo json_encode(['message' => 'Voto non trovato']);
+            return;
+        }
+
+        $utenti = new Utenti();
+        $studenteId = (int) ($voto['studente_id'] ?? 0);
+        if (!$utenti->professoreInsegnaAStudente((int) $auth['sub'], $studenteId)) {
+            http_response_code(403);
+            echo json_encode([
+                'message' => 'Non sei autorizzato a modificare i voti di questo studente',
+            ]);
+            return;
+        }
+
+        $set = [];
+        if (array_key_exists('voto', $body)) {
+            if (!is_numeric($body['voto'])) {
+                http_response_code(400);
+                echo json_encode(['message' => 'Campo "voto" non numerico']);
+                return;
+            }
+            $v = (float) $body['voto'];
+            if ($v < 1 || $v > 10) {
+                http_response_code(400);
+                echo json_encode(['message' => 'Il voto deve essere compreso tra 1 e 10']);
+                return;
+            }
+            $set['voto'] = $v;
+        }
+        if (array_key_exists('materia', $body)) {
+            $materia = trim((string) $body['materia']);
+            if ($materia === '') {
+                http_response_code(400);
+                echo json_encode(['message' => 'Campo "materia" non valido']);
+                return;
+            }
+            $set['materia'] = $materia;
+        }
+        if (array_key_exists('descrizione', $body)) {
+            $set['descrizione'] = trim((string) $body['descrizione']);
+        }
+
+        if (empty($set)) {
+            http_response_code(400);
+            echo json_encode(['message' => 'Nessun campo da aggiornare']);
+            return;
+        }
+
+        $set['modificato_il']    = date('c');
+        $set['modificato_da_id'] = (int) $auth['sub'];
+
+        $count = $model->aggiorna($id, $set);
+        echo json_encode([
+            'message'  => 'Voto aggiornato',
+            'modified' => $count,
+            'campi'    => array_keys($set),
+            'voto'     => array_merge($voto, $set),
+        ]);
+    }
+
+    /**
      * DELETE /api/voti/:id
      */
     public function elimina(string $id): void {

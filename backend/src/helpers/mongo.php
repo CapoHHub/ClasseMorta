@@ -65,6 +65,31 @@ function mongoDeleteOne(string $collection, array $filter): int {
 }
 
 /**
+ * Aggiorna i campi indicati di un singolo documento (no upsert).
+ *
+ * @return int numero di documenti modificati (0 o 1)
+ */
+function mongoUpdateOne(string $collection, array $filter, array $set): int {
+    $bulk = new MongoDB\Driver\BulkWrite();
+    $bulk->update(
+        $filter,
+        ['$set' => $set],
+        ['multi' => false, 'upsert' => false]
+    );
+    $result = getMongoManager()->executeBulkWrite(mongoNamespace($collection), $bulk);
+    return $result->getModifiedCount();
+}
+
+function mongoFindOne(string $collection, array $filter): ?array {
+    $query = new MongoDB\Driver\Query($filter, ['limit' => 1]);
+    $cursor = getMongoManager()->executeQuery(mongoNamespace($collection), $query);
+    foreach ($cursor as $doc) {
+        return mongoDocToArray($doc);
+    }
+    return null;
+}
+
+/**
  * Converte un BSONDocument in array PHP serializzabile JSON.
  */
 function mongoDocToArray($doc): array {

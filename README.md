@@ -120,6 +120,7 @@ e premere Send.
 | GET    | `/api/voti?studente_id=:id` | prof / studente | Voti dello studente (Mongo) | [▶ Try](https://hoppscotch.io/?method=GET&url=https%3A%2F%2Fclassemorta-production.up.railway.app%2Fapi%2Fvoti%3Fstudente_id%3D1) |
 | GET    | `/api/voti/me` | studente | Voti propri | [▶ Try](https://hoppscotch.io/?method=GET&url=https%3A%2F%2Fclassemorta-production.up.railway.app%2Fapi%2Fvoti%2Fme) |
 | POST   | `/api/voti`    | prof | Inserisce voto | [▶ Try](https://hoppscotch.io/?method=POST&url=https%3A%2F%2Fclassemorta-production.up.railway.app%2Fapi%2Fvoti) |
+| PUT    | `/api/voti/:id` | prof | Modifica un voto esistente (`{voto?, materia?, descrizione?}`) | [▶ Try](https://hoppscotch.io/?method=PUT&url=https%3A%2F%2Fclassemorta-production.up.railway.app%2Fapi%2Fvoti%2FOBJECTID) |
 | DELETE | `/api/voti/:id` | prof | Elimina voto | [▶ Try](https://hoppscotch.io/?method=DELETE&url=https%3A%2F%2Fclassemorta-production.up.railway.app%2Fapi%2Fvoti%2FOBJECTID) |
 | GET    | `/api/verifiche` | auth | Verifiche (lista contestuale al ruolo) | [▶ Try](https://hoppscotch.io/?method=GET&url=https%3A%2F%2Fclassemorta-production.up.railway.app%2Fapi%2Fverifiche) |
 | POST   | `/api/verifiche` | prof | Crea verifica con domande | [▶ Try](https://hoppscotch.io/?method=POST&url=https%3A%2F%2Fclassemorta-production.up.railway.app%2Fapi%2Fverifiche) |

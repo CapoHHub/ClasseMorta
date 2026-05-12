@@ -69,6 +69,8 @@
         let classiData = null;
         let materieByClasse = {};
         let preselectedStudente = null;
+        let votiCorrenti = [];
+        let editingId = null;
 
         if (user) {
             renderNavbar("voti");
@@ -159,39 +161,115 @@
             const list = document.getElementById("votiList");
             list.innerHTML = `<div class="cm-empty">Caricamento...</div>`;
             try {
-                const voti = await apiFetch(`/api/voti?studente_id=${encodeURIComponent(studenteId)}`);
-                document.getElementById("counter").textContent =
-                    voti.length === 0 ? "Nessun voto" : `${voti.length} voti`;
-
-                if (!voti.length) {
-                    list.innerHTML = `<div class="cm-empty">Nessun voto ancora inserito.</div>`;
-                    return;
-                }
-                list.innerHTML = `
-                    <table class="cm-table">
-                        <thead><tr>
-                            <th>Data</th><th>Materia</th><th>Voto</th><th>Descrizione</th><th></th>
-                        </tr></thead>
-                        <tbody>
-                            ${voti.map(v => `
-                                <tr>
-                                    <td>${formatDate(v.data)}</td>
-                                    <td>${escapeHtml(v.materia || "-")}</td>
-                                    <td><span class="cm-voto ${votoClass(v.voto)}">${v.voto}</span></td>
-                                    <td>${escapeHtml(v.descrizione || "")}</td>
-                                    <td>
-                                        <button class="cm-btn cm-btn-sm cm-btn-danger"
-                                                onclick="eliminaVoto('${v._id}')">
-                                            Elimina
-                                        </button>
-                                    </td>
-                                </tr>
-                            `).join("")}
-                        </tbody>
-                    </table>
-                `;
+                votiCorrenti = await apiFetch(`/api/voti?studente_id=${encodeURIComponent(studenteId)}`);
+                editingId = null;
+                renderVoti();
             } catch (err) {
                 list.innerHTML = `<div class="cm-alert cm-alert-error">${escapeHtml(err.message)}</div>`;
+            }
+        }
+
+        function renderVoti() {
+            const list = document.getElementById("votiList");
+            const voti = votiCorrenti;
+            document.getElementById("counter").textContent =
+                voti.length === 0 ? "Nessun voto" : `${voti.length} voti`;
+
+            if (!voti.length) {
+                list.innerHTML = `<div class="cm-empty">Nessun voto ancora inserito.</div>`;
+                return;
+            }
+
+            list.innerHTML = `
+                <table class="cm-table">
+                    <thead><tr>
+                        <th>Data</th><th>Materia</th><th>Voto</th><th>Descrizione</th><th></th>
+                    </tr></thead>
+                    <tbody>
+                        ${voti.map(v => v._id === editingId ? rigaEdit(v) : rigaView(v)).join("")}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function rigaView(v) {
+            return `
+                <tr>
+                    <td>${formatDate(v.data)}</td>
+                    <td>${escapeHtml(v.materia || "-")}</td>
+                    <td><span class="cm-voto ${votoClass(v.voto)}">${v.voto}</span></td>
+                    <td>${escapeHtml(v.descrizione || "")}</td>
+                    <td style="white-space:nowrap">
+                        <button class="cm-btn cm-btn-sm cm-btn-ghost"
+                                onclick="iniziaModifica('${v._id}')">
+                            Modifica
+                        </button>
+                        <button class="cm-btn cm-btn-sm cm-btn-danger"
+                                onclick="eliminaVoto('${v._id}')">
+                            Elimina
+                        </button>
+                    </td>
+                </tr>`;
+        }
+
+        function rigaEdit(v) {
+            return `
+                <tr>
+                    <td>${formatDate(v.data)}</td>
+                    <td>${escapeHtml(v.materia || "-")}</td>
+                    <td>
+                        <input id="edit-voto-${v._id}" class="cm-input"
+                               type="number" min="1" max="10" step="0.25"
+                               value="${v.voto}" style="max-width:90px">
+                    </td>
+                    <td>
+                        <input id="edit-descr-${v._id}" class="cm-input"
+                               type="text" value="${escapeHtml(v.descrizione || "")}">
+                    </td>
+                    <td style="white-space:nowrap">
+                        <button class="cm-btn cm-btn-sm"
+                                onclick="salvaModifica('${v._id}')">
+                            Salva
+                        </button>
+                        <button class="cm-btn cm-btn-sm cm-btn-ghost"
+                                onclick="annullaModifica()">
+                            Annulla
+                        </button>
+                    </td>
+                </tr>`;
+        }
+
+        function iniziaModifica(id) {
+            editingId = id;
+            renderVoti();
+        }
+
+        function annullaModifica() {
+            editingId = null;
+            renderVoti();
+        }
+
+        async function salvaModifica(id) {
+            const votoInput  = document.getElementById(`edit-voto-${id}`);
+            const descrInput = document.getElementById(`edit-descr-${id}`);
+            const voto       = parseFloat(votoInput.value);
+            const descr      = descrInput.value;
+
+            if (isNaN(voto) || voto < 1 || voto > 10) {
+                showAlert("alertBox", "error", "Il voto deve essere un numero tra 1 e 10.");
+                return;
+            }
+
+            try {
+                await apiFetch(`/api/voti/${id}`, {
+                    method: "PUT",
+                    body: JSON.stringify({ voto, descrizione: descr }),
+                });
+                showAlert("alertBox", "success", "Voto aggiornato.");
+                editingId = null;
+                await caricaVoti();
+            } catch (err) {
+                showAlert("alertBox", "error", err.message);
             }
         }
 
@@ -229,7 +307,10 @@
             }
         }
 
-        window.eliminaVoto = eliminaVoto;
+        window.eliminaVoto    = eliminaVoto;
+        window.iniziaModifica = iniziaModifica;
+        window.annullaModifica = annullaModifica;
+        window.salvaModifica  = salvaModifica;
     </script>
 </body>
 </html>
