@@ -19,11 +19,15 @@ RUN pecl install mongodb \
 RUN a2enmod rewrite \
     && sed -ri 's/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf
 
-# Forziamo un solo MPM (prefork). In alcune build i moduli MPM event/worker
-# vengono caricati assieme a prefork e Apache rifiuta di avviarsi con:
+# Forziamo un solo MPM (prefork). In alcune build vengono caricati assieme
+# prefork ed event/worker e Apache rifiuta di avviarsi con:
 #   "Configuration error: More than one MPM loaded."
-RUN a2dismod mpm_event mpm_worker 2>/dev/null || true \
-    && a2enmod mpm_prefork
+# Rimuoviamo proprio i file enabled dei MPM e poi riabilitiamo solo prefork.
+RUN rm -f /etc/apache2/mods-enabled/mpm_*.load \
+          /etc/apache2/mods-enabled/mpm_*.conf \
+    && a2enmod mpm_prefork \
+    && echo "=== mods enabled (MPM) ===" \
+    && ls /etc/apache2/mods-enabled/ | grep -i mpm || true
 
 # Codice applicativo
 COPY . /var/www/html
