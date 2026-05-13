@@ -183,15 +183,19 @@
 <ol>
     <li><b>1.</b> Panoramica del progetto</li>
     <li><b>2.</b> Architettura: front-end e back-end separati in Docker</li>
-    <li><b>3.</b> API REST</li>
-    <li><b>4.</b> JWT e autenticazione Bearer</li>
-    <li><b>5.</b> Database SQL: PostgreSQL su Neon</li>
-    <li><b>6.</b> Database NoSQL: MongoDB Atlas</li>
-    <li><b>7.</b> SQL vs NoSQL: differenze principali</li>
-    <li><b>8.</b> Motivazioni della scelta NoSQL per i voti</li>
-    <li><b>9.</b> Vantaggi e svantaggi nel contesto del progetto</li>
-    <li><b>10.</b> Vulnerabilità didattiche</li>
-    <li><b>11.</b> Conclusioni</li>
+    <li><b>3.</b> Container, entrypoint e deploy su Railway</li>
+    <li><b>4.</b> Configurazione, segreti e principio 12-factor</li>
+    <li><b>5.</b> API REST e semantica dei metodi HTTP</li>
+    <li><b>6.</b> CORS e richieste cross-origin</li>
+    <li><b>7.</b> JWT e autenticazione Bearer</li>
+    <li><b>8.</b> Database SQL: PostgreSQL su Neon</li>
+    <li><b>9.</b> Database NoSQL: MongoDB Atlas</li>
+    <li><b>10.</b> SQL vs NoSQL: differenze principali</li>
+    <li><b>11.</b> Motivazioni della scelta NoSQL per i voti</li>
+    <li><b>12.</b> Vantaggi e svantaggi nel contesto del progetto</li>
+    <li><b>13.</b> Front-end vanilla: stato, escaping e edit-in-place</li>
+    <li><b>14.</b> Vulnerabilità didattiche</li>
+    <li><b>15.</b> Conclusioni</li>
 </ol>
 </div>
 
@@ -309,12 +313,287 @@ il frontend è accessibile su <code>localhost:3000</code>, il backend su
 <code>localhost:8080</code>. In produzione, su <b>Railway</b>, ogni servizio
 è un container separato con il proprio dominio <code>*.up.railway.app</code>;
 la variabile <code>API_URL</code> del front-end è impostata sull'origin
-del back-end.
+del back-end. Su questo dettaglio si appoggia anche il front-end:
+<code>app.js</code> sceglie l'API base in modo trasparente in base
+all'hostname della pagina.
 </p>
 
-<!-- =================== 3. API REST =================== -->
+<pre><code>const API_URL =
+    window.location.hostname === "localhost"
+        ? "http://localhost:8080"
+        : "https://classemorta-production.up.railway.app";</code></pre>
+
+<p>
+Questo piccolo trucco permette di sviluppare in locale senza mai
+toccare il codice quando si va in produzione: lo stesso bundle HTML/JS
+funziona in entrambi gli ambienti.
+</p>
+
+<!-- =================== 3. CONTAINER / DEPLOY =================== -->
 <div class="pagebreak"></div>
-<h2>3. API REST</h2>
+<h2>3. Container, entrypoint e deploy su Railway</h2>
+
+<p>
+La containerizzazione è uno dei punti tecnici più ricchi del progetto:
+i due servizi sono costruiti con due immagini di base molto diverse e
+hanno esigenze runtime altrettanto diverse (porta dinamica del cloud,
+processi multi-modulo, gestione di estensioni native PHP, file statici).
+Vale la pena entrare nel dettaglio di entrambi.
+</p>
+
+<h3>3.1 Immagine backend: PHP + Apache</h3>
+
+<p>
+Il <code>Dockerfile</code> del back-end parte dall'immagine ufficiale
+<code>php:8.2-apache</code> e la arricchisce con:
+</p>
+
+<ul>
+    <li>
+        <b>Pacchetti di sistema</b> (<code>libpq-dev</code>,
+        <code>libssl-dev</code>, <code>pkg-config</code>) necessari a
+        compilare le estensioni PHP native.
+    </li>
+    <li>
+        <b>Estensione <code>pdo_pgsql</code></b>, installata con
+        <code>docker-php-ext-install</code>: è il driver PDO per PostgreSQL.
+    </li>
+    <li>
+        <b>Estensione MongoDB</b>, installata via PECL e attivata con
+        <code>docker-php-ext-enable</code>. È il driver low-level che
+        espone le classi <code>MongoDB\Driver\Manager</code>,
+        <code>Query</code>, <code>BulkWrite</code> usate negli helper.
+    </li>
+    <li>
+        <b>Apache <code>mod_rewrite</code></b> con
+        <code>AllowOverride All</code> per attivare le regole di
+        <code>.htaccess</code> che convogliano tutto il traffico su
+        <code>index.php</code> (pattern <i>front controller</i>).
+    </li>
+</ul>
+
+<h3>3.2 L'entrypoint shell: perché serve</h3>
+
+<p>
+L'immagine base di Apache nel container può trovarsi in due stati
+"sporchi" che fanno fallire l'avvio. Per evitarlo, un breve script
+<code>docker-entrypoint.sh</code> normalizza l'ambiente prima di
+lanciare il server:
+</p>
+
+<pre><code>#!/bin/sh
+set -e
+
+PORT="${PORT:-80}"
+
+# 1) Disabilita qualunque MPM presente e attiva solo prefork
+rm -f /etc/apache2/mods-enabled/mpm_event.{load,conf} \
+      /etc/apache2/mods-enabled/mpm_worker.{load,conf} \
+      /etc/apache2/mods-enabled/mpm_prefork.{load,conf}
+a2enmod mpm_prefork
+
+# 2) Sostituisce la porta di ascolto con $PORT (variabile iniettata da Railway)
+sed -i "s/^Listen .*/Listen ${PORT}/" /etc/apache2/ports.conf
+sed -i "s|&lt;VirtualHost \*:[0-9]\+&gt;|&lt;VirtualHost *:${PORT}&gt;|" \
+    /etc/apache2/sites-available/000-default.conf
+
+exec "$@"   # passa il controllo al CMD (apache2-foreground)</code></pre>
+
+<p>
+I due passaggi risolvono due problemi reali:
+</p>
+
+<ol>
+    <li>
+        <b>MPM unico.</b> Apache supporta tre moduli di multiprocessing
+        (<i>Multi-Processing Module</i>): <code>prefork</code>,
+        <code>worker</code> ed <code>event</code>. Solo uno può essere
+        attivo per istanza. PHP come modulo Apache non è
+        thread-safe: deve obbligatoriamente girare con <b>prefork</b>
+        (un processo per richiesta, niente thread condivisi). L'entrypoint
+        cancella eventuali moduli concorrenti e abilita solo
+        <code>mpm_prefork</code>.
+    </li>
+    <li>
+        <b>Porta dinamica.</b> Le piattaforme cloud moderne (Railway,
+        Heroku, Cloud Run...) iniettano la porta da usare nella variabile
+        d'ambiente <code>PORT</code> a tempo di esecuzione, non a tempo
+        di build. Per questo lo <code>sed</code> riscrive sia
+        <code>ports.conf</code> che il <code>VirtualHost</code> con il
+        valore di <code>${PORT}</code> appena prima dell'<code>exec</code>.
+    </li>
+</ol>
+
+<h3>3.3 Immagine frontend: Nginx Alpine</h3>
+
+<p>
+Il front-end è ancora più semplice: parte da <code>nginx:alpine</code>
+(immagine intorno ai 20 MB), copia tutti i file statici in
+<code>/usr/share/nginx/html</code> e applica un piccolo
+<code>default.conf</code>:
+</p>
+
+<pre><code>server {
+    listen 80;
+    server_name localhost;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ $uri.html =404;
+    }
+}</code></pre>
+
+<p>
+La direttiva <code>try_files</code> è cruciale: permette di servire una
+pagina come <code>/dashboard</code> facendola corrispondere a
+<code>dashboard.html</code> presente sul disco. È un compromesso fra
+SPA pura (un solo file servito a tutti i path) e Multi Page Application
+classica (un file per ogni URL).
+</p>
+
+<h3>3.4 Composizione locale e ambiente di produzione</h3>
+
+<p>
+Il <code>docker-compose.yml</code> definisce due servizi pronti
+all'uso. La parte interessante è il <i>bind mount</i> del file
+<code>.env</code> della root del repo dentro al container backend,
+in modalità <i>read-only</i>:
+</p>
+
+<pre><code>volumes:
+    - ./backend:/var/www/html
+    - ./.env:/var/www/html/.env:ro</code></pre>
+
+<p>
+In questo modo lo stesso <code>.env</code> serve sia al codice
+del backend (che lo legge tramite <code>parse_ini_file</code>), sia al
+processo PHP dentro al container, senza duplicare il file e senza
+rischiare di committarlo (è esplicitamente listato nel
+<code>.gitignore</code>).
+</p>
+
+<p>
+In produzione su Railway non esiste alcun file <code>.env</code> nel
+container: le stesse chiavi vengono iniettate come variabili
+d'ambiente del processo. Il loader le riconcilia in automatico, come
+spiegato nel prossimo capitolo.
+</p>
+
+<!-- =================== 4. CONFIG / 12-FACTOR =================== -->
+<div class="pagebreak"></div>
+<h2>4. Configurazione, segreti e principio 12-factor</h2>
+
+<p>
+Un'applicazione che gira sia in locale (con <code>docker-compose</code>)
+sia in cloud (Railway) ha bisogno di una strategia robusta per gestire
+parametri sensibili — credenziali database, chiavi di firma JWT, URI
+Mongo. Il progetto adotta una variante pragmatica di quello che la
+metodologia <b>12-Factor App</b> chiama <i>Config</i>: tenere
+<b>tutta la configurazione fuori dal codice</b>, in variabili d'ambiente.
+</p>
+
+<h3>4.1 Loader gerarchico</h3>
+
+<p>
+La funzione <code>loadEnv()</code> in
+<code>backend/src/helpers/db.php</code> implementa una semplice
+gerarchia di priorità:
+</p>
+
+<pre><code>function loadEnv(): array {
+    static $env = null;
+    if ($env !== null) return $env;   // memoization
+
+    $env = [];
+    $path = __DIR__ . '/../../.env';
+    if (file_exists($path)) {
+        $env = parse_ini_file($path) ?: [];
+    }
+
+    $keys = ['PGHOST','PGDATABASE','PGUSER','PGPASSWORD','PGPORT',
+             'PGSSLMODE','PGCHANNELBINDING',
+             'MONGO_URI','MONGO_DB','JWT_SECRET'];
+
+    foreach ($keys as $k) {
+        if (empty($env[$k])) {
+            $val = getenv($k) ?: ($_ENV[$k] ?? '');
+            if ($val !== '') $env[$k] = $val;
+        }
+    }
+    return $env;
+}</code></pre>
+
+<p>
+Il file <code>.env</code>, se presente, ha la precedenza (utile in
+sviluppo); ma se una chiave manca o è vuota, la funzione ricade sulle
+variabili del processo, dove le inietta Railway in produzione. Questo
+schema permette il deploy senza modifiche al codice fra ambienti.
+La <i>static cache</i> garantisce che il parsing del file avvenga una
+sola volta per richiesta HTTP, indipendentemente da quanti moduli
+chiamano <code>loadEnv()</code>.
+</p>
+
+<h3>4.2 Variabili tracciate</h3>
+
+<table>
+    <thead>
+        <tr><th>Chiave</th><th>Scopo</th></tr>
+    </thead>
+    <tbody>
+        <tr><td><code>PGHOST</code></td><td>Hostname Postgres (es. <code>ep-...-pooler.neon.tech</code>)</td></tr>
+        <tr><td><code>PGDATABASE</code></td><td>Nome del database relazionale</td></tr>
+        <tr><td><code>PGUSER</code> / <code>PGPASSWORD</code></td><td>Credenziali Postgres</td></tr>
+        <tr><td><code>PGPORT</code></td><td>Porta del cluster Neon (di norma 5432)</td></tr>
+        <tr><td><code>PGSSLMODE</code></td><td>Forzato a <code>require</code>: Neon non accetta connessioni in chiaro</td></tr>
+        <tr><td><code>MONGO_URI</code></td><td>Connection string Atlas con utente e cluster</td></tr>
+        <tr><td><code>MONGO_DB</code></td><td>Nome del database Mongo (default <code>classeMorta</code>)</td></tr>
+        <tr><td><code>JWT_SECRET</code></td><td>Chiave HMAC per firmare i token (≥ 32 byte raccomandati)</td></tr>
+    </tbody>
+</table>
+
+<h3>4.3 Sicurezza operativa: il <code>.env</code> non finisce su Git</h3>
+
+<p>
+La regola di base è semplice ma critica: <b>i segreti non devono mai
+entrare nella history di Git</b>. Il progetto applica due livelli di
+difesa:
+</p>
+
+<ol>
+    <li>
+        <b>Esclusione tramite <code>.gitignore</code>:</b> le regole
+        <code>.env</code> e <code>.env.*</code> impediscono che il file
+        venga aggiunto accidentalmente con <code>git add</code>.
+        Una eccezione <code>!.env.example</code> consente comunque di
+        versionare un modello vuoto con la lista delle chiavi attese,
+        utile per onboardare nuovi sviluppatori.
+    </li>
+    <li>
+        <b>Rimozione dall'indice:</b> i file <code>.env</code> e
+        <code>backend/.env</code> sono stati rimossi
+        dall'indice (<code>git rm --cached</code>) e — quando la
+        history conteneva commit precedenti con segreti reali — è stata
+        riscritta con <code>git filter-repo</code> per espungere
+        completamente quei blob, seguita da un <i>force push</i> sul
+        remoto. Questa è la procedura corretta quando un segreto
+        rischia di essere stato esposto pubblicamente: dopo la pulizia,
+        i segreti coinvolti vanno comunque considerati compromessi e
+        <b>ruotati</b> (cambio password, rigenerazione chiavi).
+    </li>
+</ol>
+
+<div class="warn">
+<b>Nota didattica.</b> Anche se la history viene riscritta, GitHub
+mantiene per un certo tempo i blob raggiungibili via SHA. Per questo,
+in caso di esposizione effettiva, l'unica contromisura davvero
+risolutiva è cambiare il segreto sul provider (Neon, Atlas), non solo
+"nasconderlo" nel repo.
+</div>
+
+<!-- =================== 5. API REST =================== -->
+<div class="pagebreak"></div>
+<h2>5. API REST e semantica dei metodi HTTP</h2>
 
 <p>
 REST (<i>Representational State Transfer</i>) è uno <b>stile architetturale</b>
@@ -330,29 +609,92 @@ Si basa sul protocollo HTTP e applica alcuni principi cardine:
     <li><b>Codici di stato HTTP</b> coerenti: <code>200 OK</code>, <code>201 Created</code>, <code>400 Bad Request</code>, <code>401 Unauthorized</code>, <code>403 Forbidden</code>, <code>404 Not Found</code>, <code>500 Internal Server Error</code>.</li>
 </ul>
 
-<h3>3.1 Router del back-end</h3>
+<h3>5.1 Router del back-end (front controller pattern)</h3>
 <p>
 Il file <code>backend/index.php</code> agisce da unico front-controller.
 Riceve qualsiasi richiesta (grazie alla regola di rewrite in
 <code>.htaccess</code> che convoglia tutto su <code>index.php</code>),
 ne estrae il path, lo segmenta e instrada l'esecuzione al controller
-appropriato. La logica è un semplice <code>switch</code> sul secondo
-segmento (<code>$resource</code>):
+appropriato. La logica è un doppio <code>switch</code>: sul secondo
+segmento dell'URL (<code>$resource</code>) e poi sul metodo HTTP. Lo
+schema permette di gestire URL "parlanti" come
+<code>/api/voti/664a.../</code> con metodi diversi:
 </p>
 
 <pre><code>$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-$segments = array_values(array_filter(explode('/', $path), fn($s) => $s !== ''));
+$segments = array_values(array_filter(explode('/', $path), fn($s) =&gt; $s !== ''));
 $resource = $segments[1] ?? '';
+$sub      = $segments[2] ?? null;
 
 switch ($resource) {
-    case 'login':     (new AuthController())->login();        break;
-    case 'studenti':  ...                                     break;
-    case 'voti':      ...                                     break;
-    case 'verifiche': ...                                     break;
-    default:          http_response_code(404); ...
+    case 'voti':
+        if ($method === 'GET'    && $sub === 'me')    (new VotiController())->miei();
+        elseif ($method === 'GET'    && $sub === null)   (new VotiController())->lista();
+        elseif ($method === 'POST'   && $sub === null)   (new VotiController())->crea();
+        elseif ($method === 'PUT'    && $sub !== null)   (new VotiController())->aggiorna($sub);
+        elseif ($method === 'DELETE' && $sub !== null)   (new VotiController())->elimina($sub);
+        else methodNotAllowed();
+        break;
+    ...
 }</code></pre>
 
-<h3>3.2 Mappa degli endpoint</h3>
+<p>
+Tutte le eccezioni del codice applicativo vengono catturate da un
+unico <code>try / catch</code> esterno che restituisce
+<code>500 Internal Server Error</code> con un payload JSON
+strutturato. Le situazioni di "metodo non supportato per la risorsa"
+restituiscono invece <code>405 Method Not Allowed</code>, secondo la
+specifica HTTP.
+</p>
+
+<h3>5.2 Semantica dei metodi HTTP e idempotenza</h3>
+
+<p>
+REST non è solo "URL belli": gran parte della disciplina sta nell'usare
+i metodi HTTP <b>con il significato che la specifica gli assegna</b>.
+La tabella seguente riassume le proprietà rilevanti:
+</p>
+
+<table>
+    <thead>
+        <tr><th>Metodo</th><th>Safe</th><th>Idempotente</th><th>Uso tipico</th></tr>
+    </thead>
+    <tbody>
+        <tr><td><b>GET</b></td><td>sì</td><td>sì</td><td>Lettura senza effetti collaterali</td></tr>
+        <tr><td><b>POST</b></td><td>no</td><td>no</td><td>Creazione (l'ID lo decide il server)</td></tr>
+        <tr><td><b>PUT</b></td><td>no</td><td>sì</td><td>Sostituzione completa di una risorsa a un URL noto</td></tr>
+        <tr><td><b>PATCH</b></td><td>no</td><td>no (in genere)</td><td>Modifica parziale</td></tr>
+        <tr><td><b>DELETE</b></td><td>no</td><td>sì</td><td>Cancellazione</td></tr>
+    </tbody>
+</table>
+
+<p>
+"Idempotente" significa che ripetere la richiesta produce lo stesso
+stato finale. È una proprietà fondamentale per la resilienza: se la
+rete cade dopo che la richiesta è stata processata ma prima che la
+risposta sia tornata al client, quest'ultimo può ritentare senza
+rischio di duplicare l'effetto. Per questo motivo:
+</p>
+
+<ul>
+    <li>
+        L'<b>inserimento di un voto</b> usa <code>POST /api/voti</code>:
+        ripeterlo per errore creerebbe due voti distinti, quindi
+        <i>non</i> deve essere idempotente.
+    </li>
+    <li>
+        La <b>modifica di un voto</b> usa
+        <code>PUT /api/voti/:id</code>: ripeterla porta sempre allo
+        stesso stato finale (il voto con quei campi).
+    </li>
+    <li>
+        La <b>cancellazione</b> usa <code>DELETE</code>: ripeterla
+        sullo stesso ID restituisce 0 documenti rimossi la seconda
+        volta, ma lo stato del database resta invariato.
+    </li>
+</ul>
+
+<h3>5.3 Mappa degli endpoint</h3>
 <table>
     <thead>
         <tr><th>Metodo</th><th>Endpoint</th><th>Ruolo</th><th>Descrizione</th></tr>
@@ -362,8 +704,11 @@ switch ($resource) {
         <tr><td>GET</td><td><code>/api/me</code></td><td>auth</td><td>Dati utente loggato</td></tr>
         <tr><td>GET</td><td><code>/api/classi</code></td><td>professore</td><td>Classi e materie del prof</td></tr>
         <tr><td>GET</td><td><code>/api/studenti?classe=5A</code></td><td>professore</td><td>Studenti della classe</td></tr>
+        <tr><td>GET</td><td><code>/api/studenti/:id</code></td><td>professore</td><td>Anagrafica singolo studente</td></tr>
         <tr><td>GET</td><td><code>/api/voti?studente_id=:id</code></td><td>auth</td><td>Voti dello studente (MongoDB)</td></tr>
+        <tr><td>GET</td><td><code>/api/voti/me</code></td><td>studente</td><td>Voti propri</td></tr>
         <tr><td>POST</td><td><code>/api/voti</code></td><td>professore</td><td>Inserisce un voto</td></tr>
+        <tr><td><b>PUT</b></td><td><code>/api/voti/:id</code></td><td>professore</td><td><b>Aggiorna un voto esistente</b></td></tr>
         <tr><td>DELETE</td><td><code>/api/voti/:id</code></td><td>professore</td><td>Elimina un voto</td></tr>
         <tr><td>GET</td><td><code>/api/verifiche</code></td><td>auth</td><td>Verifiche contestuali al ruolo</td></tr>
         <tr><td>POST</td><td><code>/api/verifiche</code></td><td>professore</td><td>Crea una verifica</td></tr>
@@ -373,7 +718,69 @@ switch ($resource) {
     </tbody>
 </table>
 
-<h3>3.3 Chiamate asincrone dal client</h3>
+<h3>5.4 Focus sul nuovo endpoint <code>PUT /api/voti/:id</code></h3>
+
+<p>
+L'endpoint <code>PUT</code> sui voti è stato aggiunto per supportare
+la modifica "in posto" dei voti dal pannello del professore (vedi
+sezione 13). Il controller riceve l'ID del documento (un
+<code>ObjectId</code> Mongo) come segmento dell'URL, e nel corpo JSON
+accetta soltanto i campi da modificare:
+</p>
+
+<pre><code>PUT /api/voti/664a3f1bcde012abc3456789
+Authorization: Bearer &lt;jwt-prof&gt;
+Content-Type: application/json
+
+{
+    "voto":       7.5,
+    "descrizione": "Interrogazione recupero"
+}</code></pre>
+
+<p>
+Il controller costruisce un documento di update con
+<code>$set</code> e lo passa all'helper <code>mongoUpdateOne()</code>:
+</p>
+
+<pre><code>function mongoUpdateOne(string $collection, array $filter, array $set): int {
+    $bulk = new MongoDB\Driver\BulkWrite();
+    $bulk-&gt;update(
+        $filter,
+        ['$set' =&gt; $set],
+        ['multi' =&gt; false, 'upsert' =&gt; false]
+    );
+    $result = getMongoManager()-&gt;executeBulkWrite(
+        mongoNamespace($collection), $bulk
+    );
+    return $result-&gt;getModifiedCount();
+}</code></pre>
+
+<p>
+Tre dettagli implementativi sono rilevanti:
+</p>
+
+<ul>
+    <li>
+        <b><code>multi =&gt; false</code></b>: modifica un singolo
+        documento. Anche se il filtro dovesse matchare di più (non è il
+        caso, l'<code>_id</code> è univoco), l'effetto sarebbe limitato
+        a uno solo, prevenendo "ripiani di voti" accidentali.
+    </li>
+    <li>
+        <b><code>upsert =&gt; false</code></b>: se il documento non
+        esiste, l'operazione non lo crea. Il controller risponde
+        <code>404 Not Found</code> al client, evitando di inserire
+        per sbaglio voti "fantasma".
+    </li>
+    <li>
+        <b><code>getModifiedCount()</code></b>: distingue il caso
+        "documento trovato ma nessun campo è cambiato" (0) dal caso
+        "documento aggiornato" (1), informazione utile per la
+        risposta al client.
+    </li>
+</ul>
+
+<h3>5.5 Chiamate asincrone dal client</h3>
 <p>
 Il front-end accede alle API in modalità <i>asynchronous</i>. Entrambe le
 tecnologie richieste dalla traccia sono presenti:
@@ -386,12 +793,77 @@ tecnologie richieste dalla traccia sono presenti:
 Entrambe le funzioni aggiungono in automatico l'header
 <code>Authorization: Bearer &lt;jwt&gt;</code> se l'utente è loggato, e
 gestiscono in modo centralizzato i redirect su <code>401</code> e la
-serializzazione del corpo JSON.
+serializzazione del corpo JSON. <code>apiFetch()</code> rilancia un
+errore strutturato (<code>{ message, status, data }</code>) che le
+pagine catturano per mostrare i messaggi di errore all'utente.
 </p>
 
-<!-- =================== 4. JWT =================== -->
+<!-- =================== 6. CORS =================== -->
 <div class="pagebreak"></div>
-<h2>4. JWT e autenticazione Bearer</h2>
+<h2>6. CORS e richieste cross-origin</h2>
+
+<p>
+Front-end e back-end vivono su due <i>origin</i> diversi (in locale
+<code>localhost:3000</code> e <code>localhost:8080</code>; in
+produzione due sottodomini di <code>railway.app</code>). Il browser
+considera "cross-origin" qualunque richiesta verso un'origin diversa
+da quella della pagina e applica la
+<b>Same-Origin Policy</b>: bloccarebbe per default la lettura della
+risposta. Per consentirla, il server deve dichiarare esplicitamente
+quali origin, metodi e header sono ammessi tramite il protocollo
+<b>CORS</b> (Cross-Origin Resource Sharing, RFC compliant via
+<code>fetch</code> living standard).
+</p>
+
+<h3>6.1 Header CORS nel backend</h3>
+
+<p>
+Il front-controller <code>index.php</code> emette quattro header su
+ogni risposta:
+</p>
+
+<pre><code>header("Access-Control-Allow-Origin: *");
+header("Content-Type: application/json; charset=UTF-8");
+header("Access-Control-Allow-Methods:
+         GET, POST, PUT, DELETE, OPTIONS");
+header("Access-Control-Allow-Headers:
+         Content-Type, Access-Control-Allow-Headers,
+         Authorization, X-Requested-With");</code></pre>
+
+<p>
+La policy "tutti possono accedere" (<code>*</code>) è scelta
+volutamente permissiva, adatta a un progetto didattico pubblico.
+In un sistema reale si dichiarerebbero solo gli origin del proprio
+frontend.
+</p>
+
+<h3>6.2 Le richieste <i>preflight</i> <code>OPTIONS</code></h3>
+
+<p>
+Quando il browser sta per inviare una richiesta "non semplice" — per
+esempio un <code>PUT</code> con header <code>Authorization</code> e
+corpo JSON — esegue prima una <i>preflight</i>: una
+<code>OPTIONS</code> con header <code>Access-Control-Request-Method</code>
+e <code>Access-Control-Request-Headers</code>, alla quale il server
+deve rispondere con i CORS header sopra. Solo se la preflight è OK,
+parte la richiesta vera. Il backend gestisce il caso con un
+cortocircuito iniziale:
+</p>
+
+<pre><code>if ($method === 'OPTIONS') {
+    http_response_code(204);   // No Content
+    exit;
+}</code></pre>
+
+<p>
+Questo evita di entrare nel router applicativo per richieste che
+servono solo a stabilire la policy CORS, e risponde nel modo più
+veloce possibile (un 204 vuoto).
+</p>
+
+<!-- =================== 7. JWT =================== -->
+<div class="pagebreak"></div>
+<h2>7. JWT e autenticazione Bearer</h2>
 
 <p>
 Un <b>JSON Web Token</b> è un formato standardizzato (RFC 7519) per
@@ -402,7 +874,7 @@ informazioni necessarie per identificare l'utente viaggiano nel token,
 firmate digitalmente.
 </p>
 
-<h3>4.1 Struttura del token</h3>
+<h3>7.1 Struttura del token</h3>
 <p>
 Un JWT è composto da tre parti separate da un punto:
 <code>HEADER.PAYLOAD.SIGNATURE</code>, ognuna codificata in Base64-URL.
@@ -435,13 +907,128 @@ e confrontarla con quella ricevuta: se coincidono, il token è autentico
 e non è stato manomesso.
 </p>
 
-<h3>4.2 Bearer scheme</h3>
+<h3>7.2 Implementazione PHP "from scratch"</h3>
+
+<p>
+Il progetto non usa librerie esterne per il JWT, ma una implementazione
+minimale di una cinquantina di righe (<code>helpers/jwt.php</code>).
+Vale la pena entrare nei dettagli, perché tocca diversi concetti
+crittografici concreti.
+</p>
+
+<h4>Base64-URL</h4>
+
+<p>
+La codifica Base64 classica usa i caratteri <code>+</code>,
+<code>/</code> e <code>=</code> come padding: tutti e tre hanno
+significato speciale dentro un URL, quindi devono essere rimpiazzati.
+<b>Base64-URL</b> (RFC 4648, sezione 5) sostituisce <code>+</code> con
+<code>-</code>, <code>/</code> con <code>_</code> ed elimina il
+padding. L'implementazione è banale ma necessaria:
+</p>
+
+<pre><code>function base64UrlEncode(string $data): string {
+    return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+}
+
+function base64UrlDecode(string $data): string {
+    $remainder = strlen($data) % 4;
+    if ($remainder) {
+        $data .= str_repeat('=', 4 - $remainder);
+    }
+    return base64_decode(strtr($data, '-_', '+/'));
+}</code></pre>
+
+<h4>Generazione del token</h4>
+
+<pre><code>function jwtEncode(array $claims, int $ttl = 3600): string {
+    $header  = ['alg' =&gt; 'HS256', 'typ' =&gt; 'JWT'];
+    $now     = time();
+    $payload = array_merge($claims, ['iat' =&gt; $now, 'exp' =&gt; $now + $ttl]);
+
+    $h = base64UrlEncode(json_encode($header));
+    $p = base64UrlEncode(json_encode($payload));
+    $s = base64UrlEncode(
+        hash_hmac('sha256', "$h.$p", jwtSecret(), true)
+    );
+    return "$h.$p.$s";
+}</code></pre>
+
+<p>
+I claim <code>iat</code> (<i>issued at</i>) ed <code>exp</code>
+(<i>expiration</i>) sono Unix timestamp in secondi: standard registrato
+dalla RFC 7519. Il TTL di default è 3600 s (un'ora), ragionevole per
+una sessione utente di un'applicazione web. La funzione
+<code>hash_hmac</code> con <code>true</code> come ultimo parametro
+restituisce il digest <i>binario</i>, che poi viene codificato in
+Base64-URL.
+</p>
+
+<h4>Verifica con confronto timing-safe</h4>
+
+<pre><code>function jwtDecode(string $token): array {
+    [$h, $p, $s] = explode('.', $token);
+
+    $expectedSig = base64UrlEncode(
+        hash_hmac('sha256', "$h.$p", jwtSecret(), true)
+    );
+    if (!hash_equals($expectedSig, $s)) {
+        throw new RuntimeException("Firma JWT non valida");
+    }
+    $payload = json_decode(base64UrlDecode($p), true);
+    if (isset($payload['exp']) &amp;&amp; $payload['exp'] &lt; time()) {
+        throw new RuntimeException("Token scaduto");
+    }
+    return $payload;
+}</code></pre>
+
+<p>
+Il dettaglio più importante è l'uso di <b><code>hash_equals()</code></b>
+al posto di <code>===</code> per confrontare la firma. Il confronto
+naïve di stringhe in PHP esce non appena trova il primo byte diverso:
+questo crea un canale laterale temporale che, in teoria, permette a
+un attaccante di "indovinare" la firma byte per byte misurando il
+tempo di risposta del server (<i>timing attack</i>).
+<code>hash_equals</code> confronta tutti i byte in tempo costante,
+chiudendo il canale.
+</p>
+
+<h3>7.3 Bearer scheme e middleware di autorizzazione</h3>
 <p>
 La <i>Bearer Authentication</i> (RFC 6750) prescrive che il client, una
 volta ottenuto il token, lo includa nelle richieste tramite l'header
 HTTP <code>Authorization</code>:
 </p>
 <pre><code>Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEs...</code></pre>
+<p>
+La funzione <code>richiediAuth()</code> agisce da <i>middleware</i>:
+viene chiamata all'inizio di ogni controller protetto e:
+</p>
+
+<ol>
+    <li>
+        Estrae l'header <code>Authorization</code> in modo
+        case-insensitive (alcune piattaforme lo passano come
+        <code>HTTP_AUTHORIZATION</code> nel superglobal
+        <code>$_SERVER</code>), gestendo sia <code>getallheaders()</code>
+        sia il fallback diretto.
+    </li>
+    <li>
+        Verifica il formato <code>Bearer &lt;token&gt;</code> con una
+        regex case-insensitive.
+    </li>
+    <li>
+        Decodifica il JWT, verificando firma e scadenza. Su errore
+        risponde <code>401 Unauthorized</code> con un payload JSON che
+        spiega il motivo, e termina la richiesta con <code>exit</code>.
+    </li>
+    <li>
+        Se viene passato un array di ruoli ammessi, controlla che il
+        ruolo dell'utente sia tra quelli; altrimenti risponde
+        <code>403 Forbidden</code>.
+    </li>
+</ol>
+
 <p>
 Il termine <i>bearer</i> ("portatore") implica che chiunque possieda il
 token è autorizzato come l'utente: per questo motivo il token deve
@@ -451,7 +1038,7 @@ comoda, ma esposta a XSS — il che è esattamente ciò che dimostra la
 vulnerabilità Stored XSS sulle risposte di verifica).
 </p>
 
-<h3>4.3 Flusso di autenticazione</h3>
+<h3>7.4 Flusso di autenticazione</h3>
 <ol>
     <li>L'utente invia <code>POST /api/login</code> con email, password e ruolo.</li>
     <li>Il backend verifica le credenziali su Postgres, costruisce il payload e firma il JWT.</li>
@@ -461,7 +1048,7 @@ vulnerabilità Stored XSS sulle risposte di verifica).
     <li>Allo scadere (1 h) o se l'utente esegue <i>logout</i>, il token viene scartato.</li>
 </ol>
 
-<h3>4.4 Confronto con sessioni cookie-based</h3>
+<h3>7.5 Confronto con sessioni cookie-based</h3>
 <table>
     <thead>
         <tr><th>Aspetto</th><th>Sessione lato server</th><th>JWT</th></tr>
@@ -475,9 +1062,9 @@ vulnerabilità Stored XSS sulle risposte di verifica).
     </tbody>
 </table>
 
-<!-- =================== 5. POSTGRES =================== -->
+<!-- =================== 8. POSTGRES =================== -->
 <div class="pagebreak"></div>
-<h2>5. Database SQL: PostgreSQL su Neon</h2>
+<h2>8. Database SQL: PostgreSQL su Neon</h2>
 
 <p>
 La parte <i>strutturata</i> dei dati — utenti, classi, materie,
@@ -489,7 +1076,7 @@ foreign key con <code>ON DELETE CASCADE</code> per garantire
 l'integrità referenziale.
 </p>
 
-<h3>5.1 Schema essenziale</h3>
+<h3>8.1 Schema essenziale</h3>
 <table>
     <thead>
         <tr><th>Tabella</th><th>Contenuto</th><th>Relazioni</th></tr>
@@ -505,17 +1092,91 @@ l'integrità referenziale.
     </tbody>
 </table>
 
-<h3>5.2 Connessione</h3>
 <p>
-La connessione avviene tramite <b>PDO</b> con il driver
-<code>pgsql</code>. Le credenziali sono lette dal file <code>.env</code>
-(in locale) o dalle variabili d'ambiente del container (in cloud).
-La connessione richiede TLS (<code>sslmode=require</code>) perché Neon
-non accetta connessioni in chiaro.
+Lo schema sfrutta diverse feature tipiche di un RDBMS maturo:
+chiavi primarie <code>SERIAL</code> (con sequenze native Postgres),
+vincoli <code>UNIQUE</code> sulle email, <code>FOREIGN KEY</code> con
+<code>ON DELETE CASCADE</code>, <code>UNIQUE</code> compositi (es. in
+<code>insegnamenti</code> la tripla professore/materia/classe), default
+<code>CURRENT_TIMESTAMP</code> sulle date di creazione.
 </p>
 
-<!-- =================== 6. MONGO =================== -->
-<h2>6. Database NoSQL: MongoDB Atlas</h2>
+<h3>8.2 Connessione PDO con pattern singleton</h3>
+
+<p>
+La connessione avviene tramite <b>PDO</b> con il driver
+<code>pgsql</code>. L'helper <code>getPDO()</code> applica un
+<b>singleton</b> con variabile statica: la prima chiamata costruisce
+e configura l'oggetto PDO, le chiamate successive nello stesso
+processo riusano la stessa connessione.
+</p>
+
+<pre><code>function getPDO(): PDO {
+    static $pdo = null;
+    if ($pdo !== null) return $pdo;
+
+    $env = loadEnv();
+    $pdo = new PDO(
+        "pgsql:host=$host;port=$port;dbname=$dbname;sslmode=$sslmode",
+        $user, $pass,
+        [
+            PDO::ATTR_ERRMODE            =&gt; PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE =&gt; PDO::FETCH_ASSOC,
+        ]
+    );
+    return $pdo;
+}</code></pre>
+
+<p>
+Due opzioni meritano una nota:
+</p>
+
+<ul>
+    <li>
+        <code>ERRMODE_EXCEPTION</code> trasforma gli errori SQL in
+        eccezioni PHP. Senza questa opzione, una query malformata
+        restituirebbe silenziosamente <code>false</code> e il bug
+        diventerebbe difficile da rintracciare.
+    </li>
+    <li>
+        <code>FETCH_ASSOC</code> fa restituire ogni riga come array
+        associativo (chiave =&nbsp;nome colonna). È più ergonomico del
+        default <code>FETCH_BOTH</code>, che duplica ogni colonna sia
+        per nome sia per indice, occupando il doppio della memoria.
+    </li>
+</ul>
+
+<p>
+La connessione richiede TLS (<code>sslmode=require</code>) perché
+Neon non accetta connessioni in chiaro: tutto il traffico fra il
+container e il database è cifrato.
+</p>
+
+<h3>8.3 Esempio di prepared statement</h3>
+
+<p>
+Tutte le query "buone" del progetto usano prepared statement, che
+proteggono dall'SQL injection separando la struttura SQL dai valori:
+</p>
+
+<pre><code>$sql = "SELECT id, nome, cognome, classe
+        FROM studenti
+        WHERE classe = :classe
+        ORDER BY cognome, nome";
+$stmt = getPDO()-&gt;prepare($sql);
+$stmt-&gt;execute([':classe' =&gt; $classe]);
+return $stmt-&gt;fetchAll();</code></pre>
+
+<p>
+Il driver Postgres invia la struttura della query e i parametri in
+due fasi distinte (protocollo binario): un attaccante che inserisse
+<code>'; DROP TABLE studenti;--</code> nel parametro
+<code>$classe</code> vedrebbe quel testo trattato come letterale,
+non come SQL.
+</p>
+
+<!-- =================== 9. MONGO =================== -->
+<h2>9. Database NoSQL: MongoDB Atlas</h2>
 
 <p>
 I <b>voti</b> sono invece memorizzati in <b>MongoDB Atlas</b>, in una
@@ -536,17 +1197,64 @@ Ogni voto è un documento JSON-like:
 <p>
 Non esiste alcuno schema imposto: ogni documento può, in teoria,
 avere campi diversi. La collezione viene creata automaticamente al
-primo inserimento. La connessione usa l'estensione PECL
-<code>mongodb</code>, con il driver low-level
-<code>MongoDB\Driver\Manager</code>; le operazioni sono incapsulate
-in un piccolo helper (<code>backend/src/helpers/mongo.php</code>) che
-espone le funzioni <code>mongoFind()</code>, <code>mongoInsertOne()</code>
-e <code>mongoDeleteOne()</code>.
+primo inserimento.
 </p>
 
-<!-- =================== 7. SQL VS NOSQL =================== -->
+<h3>9.1 Driver, namespace e BSON</h3>
+
+<p>
+La connessione usa l'estensione PECL <code>mongodb</code>, con il
+driver low-level <code>MongoDB\Driver\Manager</code>. Anche qui
+è applicato il pattern singleton (<code>getMongoManager()</code>) per
+riutilizzare la stessa connessione TLS verso Atlas.
+</p>
+
+<p>
+Internamente, MongoDB non serializza i documenti come JSON ma come
+<b>BSON</b> (<i>Binary JSON</i>): un formato binario che aggiunge
+tipi nativi assenti dal JSON, come <code>ObjectId</code>,
+<code>Date</code>, <code>Decimal128</code>, <code>Binary</code>. Il
+driver PHP restituisce oggetti come <code>BSONDocument</code>: per
+serializzarli a JSON sul filo della REST API, l'helper applica un
+roundtrip <code>json_decode(json_encode($doc), true)</code> e
+normalizza <code>{ "$oid": "..." }</code> in stringa, così che il
+client veda gli ID come semplici stringhe esadecimali.
+</p>
+
+<h3>9.2 Bulk write e operazioni atomiche per documento</h3>
+
+<p>
+L'API low-level di MongoDB lavora per <b>bulk</b>: anche per una
+singola operazione, si costruisce un oggetto
+<code>BulkWrite</code> e si esegue con
+<code>executeBulkWrite()</code>. È un modello che paga quando le
+operazioni si moltiplicano (es. inserire 1000 voti con una sola
+round-trip di rete), ma resta naturale anche per il caso semplice:
+</p>
+
+<pre><code>function mongoInsertOne(string $collection, array $document): string {
+    $bulk = new MongoDB\Driver\BulkWrite();
+    $id   = $bulk-&gt;insert($document);
+    getMongoManager()-&gt;executeBulkWrite(mongoNamespace($collection), $bulk);
+    return (string) $id;
+}</code></pre>
+
+<p>
+Le operazioni di update e delete passano dallo stesso oggetto bulk e
+restituiscono un <code>WriteResult</code> con i contatori
+(<code>getModifiedCount()</code>, <code>getDeletedCount()</code>) che
+il backend usa per costruire la risposta HTTP corretta.
+</p>
+
+<p>
+La transazionalità è limitata al <i>singolo documento</i>: ogni write
+è atomica, ma più write su documenti diversi possono interferire fra
+loro. Per il caso d'uso (un voto = un documento) è più che sufficiente.
+</p>
+
+<!-- =================== 10. SQL VS NOSQL =================== -->
 <div class="pagebreak"></div>
-<h2>7. SQL vs NoSQL: differenze principali</h2>
+<h2>10. SQL vs NoSQL: differenze principali</h2>
 
 <p>
 "NoSQL" è un termine ombrello che indica database non relazionali
@@ -610,7 +1318,7 @@ scalabilità e linguaggio di interrogazione.
     </tbody>
 </table>
 
-<h3>7.1 ACID vs BASE</h3>
+<h3>10.1 ACID vs BASE</h3>
 <p>
 I database relazionali garantiscono <b>ACID</b>: ogni transazione è
 atomica, mantiene la consistenza, è isolata dalle altre e i dati
@@ -623,8 +1331,8 @@ in presenza di partizione di rete si può garantire al più due delle
 tre proprietà.
 </p>
 
-<!-- =================== 8. MOTIVAZIONI =================== -->
-<h2>8. Motivazioni della scelta NoSQL per i voti</h2>
+<!-- =================== 11. MOTIVAZIONI =================== -->
+<h2>11. Motivazioni della scelta NoSQL per i voti</h2>
 
 <p>
 La scelta di affiancare a Postgres una collezione MongoDB
@@ -669,11 +1377,11 @@ sistema.
     </li>
 </ol>
 
-<!-- =================== 9. VANTAGGI E SVANTAGGI =================== -->
+<!-- =================== 12. VANTAGGI E SVANTAGGI =================== -->
 <div class="pagebreak"></div>
-<h2>9. Vantaggi e svantaggi nel contesto del progetto</h2>
+<h2>12. Vantaggi e svantaggi nel contesto del progetto</h2>
 
-<h3>9.1 Vantaggi osservati</h3>
+<h3>12.1 Vantaggi osservati</h3>
 
 <div class="grid-two">
     <div class="box">
@@ -694,7 +1402,7 @@ sistema.
     </div>
 </div>
 
-<h3>9.2 Svantaggi e compromessi</h3>
+<h3>12.2 Svantaggi e compromessi</h3>
 
 <div class="grid-two">
     <div class="box">
@@ -715,7 +1423,7 @@ sistema.
     </div>
 </div>
 
-<h3>9.3 Bilancio complessivo</h3>
+<h3>12.3 Bilancio complessivo</h3>
 <p>
 Nel contesto di ClasseMorta, la scelta NoSQL per i voti si è rivelata
 appropriata: il modello dati è semplice, le query sono uniformi
@@ -725,8 +1433,151 @@ in parallelo una query Postgres per gli studenti dalla pagina front-end,
 che è già la naturale "vista aggregata" dei dati.
 </p>
 
-<!-- =================== 10. VULNERABILITÀ =================== -->
-<h2>10. Vulnerabilità didattiche</h2>
+<!-- =================== 13. FRONT-END VANILLA =================== -->
+<div class="pagebreak"></div>
+<h2>13. Front-end vanilla: stato, escaping e edit-in-place</h2>
+
+<p>
+Il front-end non usa alcun framework reattivo: è composto da una
+manciata di pagine HTML statiche più un singolo file
+<code>app.js</code> che contiene il "kernel" condiviso (auth, fetch,
+navbar, utility di formattazione). Ogni pagina aggiunge poi il proprio
+script inline per la logica specifica. Questa scelta minimalista è
+didatticamente preziosa: rende esplicito ciò che React, Vue o Angular
+nascondono sotto astrazioni.
+</p>
+
+<h3>13.1 Gestione dello stato senza framework</h3>
+
+<p>
+La pagina <code>voti.html</code> è l'esempio più articolato: deve
+caricare le classi del professore, far selezionare uno studente,
+caricare i suoi voti, permettere creazione, modifica
+"in posto" ed eliminazione. Lo stato è tenuto in
+tre variabili globali al modulo:
+</p>
+
+<pre><code>let classiData       = null;   // { classi: [], materie: [] }
+let materieByClasse  = {};     // indice classe -&gt; materie
+let votiCorrenti     = [];     // ultimo array fetchato
+let editingId        = null;   // ObjectId del voto in modifica, o null</code></pre>
+
+<p>
+La funzione <code>renderVoti()</code> ricostruisce <i>per intero</i>
+la tabella dei voti partendo da <code>votiCorrenti</code> e
+<code>editingId</code>: ogni riga è in modalità "view" o "edit" in
+base a <code>v._id === editingId</code>. È in piccolo il pattern
+dichiarativo che React applica con il <i>virtual DOM</i>, qui
+realizzato con una semplice <code>template literal</code> e un
+<code>innerHTML</code> alla radice del contenitore.
+</p>
+
+<h3>13.2 Inline editing dei voti</h3>
+
+<p>
+L'ultima funzionalità aggiunta è la possibilità per il professore di
+modificare un voto già inserito senza ricaricare la pagina e senza
+aprire una modale: il flusso è tutto sulla stessa riga della tabella.
+</p>
+
+<ol>
+    <li>
+        L'utente clicca <b>Modifica</b> su una riga.
+        <code>iniziaModifica(id)</code> imposta
+        <code>editingId = id</code> e richiama
+        <code>renderVoti()</code>: quella riga si trasforma in due
+        input controllati (voto numerico e descrizione), mentre i
+        bottoni diventano <b>Salva</b> e <b>Annulla</b>.
+    </li>
+    <li>
+        Su <b>Salva</b>, <code>salvaModifica(id)</code> valida il voto
+        (deve essere fra 1 e 10) e chiama
+        <code>PUT /api/voti/:id</code> con il payload parziale.
+    </li>
+    <li>
+        In caso di successo, lo stato torna a <code>editingId = null</code>
+        e si ricaricano i voti con <code>caricaVoti()</code>, che li
+        rilegge da MongoDB. Si potrebbe ottimizzare con un update
+        ottimistico locale, ma il refetch garantisce coerenza con
+        eventuali modifiche concorrenti.
+    </li>
+    <li>
+        Su <b>Annulla</b>, <code>annullaModifica()</code> resetta solo
+        lo stato locale: nessuna chiamata al server.
+    </li>
+</ol>
+
+<p>
+Le funzioni invocate inline da <code>onclick</code> nel template
+HTML (es. <code>onclick="salvaModifica('${v._id}')"</code>) sono
+esposte sul <code>window</code> in coda allo script, perché la
+risoluzione di <code>onclick</code> avviene nello scope globale,
+non nel modulo del template literal.
+</p>
+
+<h3>13.3 Escaping HTML "fatto in casa"</h3>
+
+<p>
+Tutti i valori provenienti dal server (descrizione del voto, nome
+studente, ecc.) vengono passati attraverso la funzione
+<code>escapeHtml()</code> prima di essere inseriti nel DOM:
+</p>
+
+<pre><code>function escapeHtml(s) {
+    if (s === null || s === undefined) return "";
+    return String(s)
+        .replace(/&amp;/g, "&amp;amp;")
+        .replace(/&lt;/g, "&amp;lt;")
+        .replace(/&gt;/g, "&amp;gt;")
+        .replace(/"/g, "&amp;quot;")
+        .replace(/'/g, "&amp;#39;");
+}</code></pre>
+
+<p>
+È volutamente <i>l'opposto</i> di ciò che fa la pagina
+<code>risposte.html</code> (la vulnerabilità XSS): un confronto
+diretto fra una pagina "ben fatta" e una "vulnerabile" rende
+l'apprendimento molto efficace. La regola operativa è semplice:
+<b>tutto ciò che viene dall'utente passa per
+<code>escapeHtml()</code></b> prima di essere serializzato dentro un
+template <code>innerHTML</code>. L'alternativa
+preferita, dove possibile, è <code>textContent</code>, che applica
+l'escaping automaticamente.
+</p>
+
+<h3>13.4 Fetch vs XMLHttpRequest</h3>
+
+<p>
+La traccia chiede di mostrare conoscenza delle chiamate asincrone, e
+il progetto sfrutta entrambe le API storiche:
+</p>
+
+<div class="grid-two">
+    <div class="box">
+        <h4>Fetch (<code>apiFetch</code>)</h4>
+        <p>Basato su <i>Promise</i> e <code>async/await</code>. API
+        moderna e snella: gestisce streaming, abort signal, response
+        binarie. Usato in quasi tutte le pagine.</p>
+    </div>
+    <div class="box">
+        <h4>XMLHttpRequest (<code>apiXHR</code>)</h4>
+        <p>API storica (anni 2000), basata su event handler
+        (<code>onreadystatechange</code>). Più verbosa, ma utile per
+        misurare il progresso di upload/download.
+        Conservata nella pagina <code>studenti.html</code> a scopo
+        didattico.</p>
+    </div>
+</div>
+
+<p>
+Entrambe le funzioni in <code>app.js</code> incapsulano lo stesso
+contratto: aggiungono in automatico il <code>Bearer</code>, gestiscono
+il <code>401</code> con redirect al login, e tornano un oggetto JSON
+già parsato (o rilanciano un <code>Error</code> arricchito).
+</p>
+
+<!-- =================== 14. VULNERABILITÀ =================== -->
+<h2>14. Vulnerabilità didattiche</h2>
 
 <p>
 Il progetto contiene <b>tre vulnerabilità volutamente inserite</b>.
@@ -734,7 +1585,7 @@ Sono pensate per essere identificate, sfruttate e successivamente
 corrette durante le esercitazioni di sicurezza.
 </p>
 
-<h3>10.1 SQL Injection nel login</h3>
+<h3>14.1 SQL Injection nel login</h3>
 <p>
 Il metodo <code>Utenti::loginVulnerabile()</code> costruisce la query
 concatenando direttamente le stringhe arrivate dal client:
@@ -749,7 +1600,7 @@ legittimo utente. La mitigazione corretta è l'uso di
 parametri associati, come avviene nel resto del progetto.
 </p>
 
-<h3>10.2 NoSQL Injection sulla lettura voti</h3>
+<h3>14.2 NoSQL Injection sulla lettura voti</h3>
 <p>
 In <code>VotiController::lista()</code> il valore di
 <code>$_GET['studente_id']</code> viene passato al filtro Mongo
@@ -768,7 +1619,7 @@ a controllare l'autorizzazione: uno studente può chiedere solo i
 propri voti, un professore solo quelli dei propri studenti.
 </p>
 
-<h3>10.3 Stored XSS sulle risposte di verifica</h3>
+<h3>14.3 Stored XSS sulle risposte di verifica</h3>
 <p>
 La pagina <code>risposte.html</code> visualizza le risposte degli
 studenti inserendole nel DOM con <code>innerHTML</code> senza alcun
@@ -786,8 +1637,8 @@ mostrano dati provenienti dagli utenti, e idealmente impostare anche
 una <code>Content-Security-Policy</code> restrittiva.
 </p>
 
-<!-- =================== 11. CONCLUSIONI =================== -->
-<h2>11. Conclusioni</h2>
+<!-- =================== 15. CONCLUSIONI =================== -->
+<h2>15. Conclusioni</h2>
 
 <p>
 ClasseMorta è una palestra completa per esercitare i concetti fondamentali
@@ -801,6 +1652,20 @@ JWT, <b>gestione di due database</b> di paradigmi opposti,
 La scelta dell'architettura decoupled, oltre a essere una buona pratica
 moderna, ha permesso di sviluppare front-end e back-end in modo
 indipendente e di deployarli separatamente su Railway tramite Docker.
+L'attenzione ad aspetti operativi spesso trascurati — un entrypoint
+shell che normalizza Apache, un loader di configurazione gerarchico,
+la cura dei segreti nel <code>.gitignore</code> — è ciò che separa un
+prototipo da un'applicazione realmente deployabile.
+</p>
+
+<p>
+L'evoluzione del CRUD sui voti (dal solo <code>POST</code>/<code>DELETE</code>
+iniziale all'aggiunta del <code>PUT</code> con edit-in-place) mostra
+come una semplice nuova funzionalità funzionale tocchi in realtà
+diverse aree dello stack: la semantica HTTP, il driver Mongo low-level
+con i suoi bulk write, il pattern di re-render del front-end senza
+framework, e perfino il middleware CORS che deve includere
+<code>PUT</code> fra i metodi ammessi.
 </p>
 
 <p>
@@ -808,6 +1673,11 @@ La presenza delle tre vulnerabilità (SQLi, NoSQLi, Stored XSS) rende il
 progetto particolarmente utile dal punto di vista della cybersecurity:
 permette di toccare con mano errori realistici, di vederne gli effetti
 in un ambiente controllato e di praticare le correzioni canoniche.
+La cura nella gestione dei segreti — <code>.env</code> ignorato da
+Git, history riscritta in caso di esposizione, confronto delle firme
+JWT in tempo costante con <code>hash_equals</code> — completa il
+quadro: la sicurezza non è una singola feature, ma una serie di
+pratiche disciplinate distribuite in ogni livello dell'applicazione.
 </p>
 
 <p>
